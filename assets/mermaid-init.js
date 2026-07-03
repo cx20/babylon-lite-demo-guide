@@ -29,6 +29,12 @@ try {
       titleColor: '#263228'
     }
   });
+  // Web フォント（Zen Kaku Gothic New 等）の読み込みを待ってから測定・描画する。
+  // 待たないとフォールバックフォントの幅でノードが確定し、本フォント差し替え後に
+  // 日本語テキストがノード枠からはみ出して切れてしまう。
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) {}
+  }
   await mermaid.run({ querySelector: 'pre.mermaid' });
 } catch (e) {
   console.error('mermaid の読み込みに失敗しました（オフラインの可能性）:', e);
