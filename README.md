@@ -10,6 +10,7 @@ WebGPU 専用の軽量 3D エンジン **Babylon Lite** の公式デモを、コ
 | デモ | 状態 | ページ |
 |------|------|--------|
 | ボクセルの世界のつくりかた（Minecraft 風サンドボックス） | 公開中 | [minecraft/](minecraft/index.html) |
+| ピクセルの手ざわりのつくりかた（マリオ風プラットフォーマー） | 公開中 | [platformer/](platformer/index.html) |
 | Gaussian Splats（仮） | 準備中 | — |
 | Treasure Waterfall（仮） | 準備中 | — |
 
@@ -42,6 +43,8 @@ babylon-lite-demo-guide/
 │       └── ogp/            # SNS シェア用サムネイル（ページごと）
 ├── minecraft/
 │   └── index.html          # Minecraft 風デモの解説（自己完結・インライン CSS）
+├── platformer/
+│   └── index.html          # マリオ風プラットフォーマーの解説（自己完結・インライン CSS）
 ├── LICENSE                 # 解説コンテンツのライセンス（CC BY 4.0）
 └── README.md
 ```
