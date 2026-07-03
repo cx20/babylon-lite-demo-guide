@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ボクセルの世界のつくりかた — Babylon Lite minecraft デモ解説</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F3F6EF;
+  --panel: #FFFFFF;
+  --ink: #263228;
+  --ink-soft: #5C6B5E;
+  --line: #DDE5D8;
+  --line-strong: #C6D1BF;
+  --grass: #57A045; --grass-deep: #33702A; --grass-bg: #EDF4EA;
+  --dirt: #8A5A33; --dirt-deep: #6E4425; --dirt-bg: #F5EEE5;
+  --stone: #78848F; --stone-deep: #5E6973; --stone-bg: #EFF1F3;
+  --water: #3B7DC8; --water-deep: #205693; --water-bg: #EAF2FA;
+  --glow: #E8A33D; --glow-deep: #B57414; --glow-bg: #FBF3E2;
+  --pig: #C96A5A; --pig-deep: #A84E3F; --pig-bg: #F8EDEA;
+  --sky: #D9EAF7;
+  --font-display: 'DotGothic16', 'Zen Kaku Gothic New', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-code: 'M PLUS 1 Code', monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.95;
+}
+a { color: var(--water-deep); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--water); outline-offset: 2px; border-radius: 4px; }
+::selection { background: #CBE3BF; }
+
+/* ── ヒーロー ─────────────────────────── */
+.hero {
+  background:
+    linear-gradient(rgba(38,50,40,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38,50,40,.045) 1px, transparent 1px),
+    linear-gradient(180deg, #E4F0FA 0%, var(--sky) 100%);
+  background-size: 18px 18px, 18px 18px, 100% 100%;
+  border-bottom: 2px solid var(--line-strong);
+  padding: 64px 24px 52px;
+}
+.hero-inner {
+  max-width: 1000px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center;
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 13px; letter-spacing: .22em;
+  color: var(--grass-deep); margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(27px, 4.4vw, 42px);
+  line-height: 1.45; margin: 0 0 14px; letter-spacing: .01em;
+}
+.hero p.sub { margin: 0; max-width: 560px; color: var(--ink-soft); }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 34px; margin-top: 26px; font-family: var(--font-code); }
+.stat b { display: block; font-size: 24px; line-height: 1.3; font-weight: 700; }
+.stat span { font-size: 12px; color: var(--ink-soft); letter-spacing: .06em; }
+.cubes { display: grid; grid-template-columns: repeat(2, 64px); gap: 20px 18px; }
+.cubes svg:nth-child(1) { animation: bob 5s ease-in-out infinite; }
+.cubes svg:nth-child(2) { animation: bob 5s ease-in-out .8s infinite; }
+.cubes svg:nth-child(3) { animation: bob 5s ease-in-out 1.6s infinite; }
+.cubes svg:nth-child(4) { animation: bob 5s ease-in-out 2.4s infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+/* ── レイアウト ───────────────────────── */
+.layout {
+  max-width: 1060px; margin: 0 auto;
+  padding: 44px 24px 90px;
+  display: grid; grid-template-columns: 218px minmax(0, 1fr); gap: 46px;
+}
+nav.toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; }
+nav.toc .toc-title { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 10px 8px; }
+nav.toc a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 8px; border-radius: 6px;
+  color: var(--ink-soft); text-decoration: none; line-height: 1.5;
+}
+nav.toc a:hover { background: var(--panel); color: var(--ink); }
+.chip { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.18); }
+
+main { min-width: 0; }
+section { margin: 0 0 78px; scroll-margin-top: 26px; }
+.ch { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 6px; }
+h2 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: 25px; line-height: 1.4;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 10px;
+}
+h2 svg { flex: none; }
+h3 { font-size: 16.5px; margin: 34px 0 8px; }
+p { margin: 0 0 16px; }
+.lede { color: var(--ink-soft); margin-bottom: 22px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.term { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.term b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+.term p { font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.8; }
+
+.callout { border: 1px solid var(--line); border-left: 5px solid var(--glow); background: var(--glow-bg); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+.callout.water { border-left-color: var(--water); background: var(--water-bg); }
+.callout.grass { border-left-color: var(--grass); background: var(--grass-bg); }
+.callout b { font-size: 14.5px; }
+.callout p { margin: 4px 0 0; font-size: 14px; }
+
+pre.mermaid {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 12px; margin: 20px 0;
+  display: flex; justify-content: center; overflow-x: auto;
+  font-family: var(--font-code); font-size: 13px; color: var(--ink-soft);
+}
+pre.code {
+  font-family: var(--font-code); font-size: 13px; line-height: 1.75;
+  background: #26322B; color: #E9F1E5;
+  border-radius: 10px; padding: 18px 22px; overflow-x: auto; margin: 18px 0;
+}
+pre.code .cm { color: #93AC8F; }
+code.inline { font-family: var(--font-code); font-size: .88em; background: #E7EDE2; border-radius: 5px; padding: 1px 7px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 18px 0; }
+th { background: #ECF1E7; text-align: left; font-weight: 700; }
+th, td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.num { font-family: var(--font-code); text-align: right; white-space: nowrap; }
+tr.gh td { font-family: var(--font-display); font-size: 12.5px; letter-spacing: .12em; padding: 7px 14px; }
+kbd { font-family: var(--font-code); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line-strong); border-bottom-width: 3px; border-radius: 6px; padding: 1px 9px; white-space: nowrap; }
+
+footer { border-top: 2px solid var(--line-strong); margin-top: 30px; padding: 28px 24px 60px; }
+footer .inner { max-width: 1060px; margin: 0 auto; font-size: 13.5px; color: var(--ink-soft); }
+
+figure.fig { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 14px 12px; margin: 20px 0; }
+figure.fig figcaption { text-align: center; font-size: 13px; color: var(--ink-soft); margin-top: 10px; line-height: 1.75; padding: 0 12px; }
+
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; gap: 26px; padding-top: 20px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 0; }
+  nav.toc .toc-title { display: none; }
+  nav.toc .links { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  nav.toc a { white-space: nowrap; }
+  .hero-inner { grid-template-columns: 1fr; }
+  .cubes { grid-template-columns: repeat(4, 48px); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cubes svg { animation: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow">BABYLON LITE 公式デモを読む</p>
+      <h1>ボクセルの世界を、<br>ブロック1個ずつ分解する。</h1>
+      <p class="sub">WebGPU 専用の軽量 3D エンジン「Babylon Lite」に付属する Minecraft 風サンドボックスデモ。地形生成から水の流れ、昼夜の光まで、全 24 ファイルのしくみを初心者向けにやさしく解説します。</p>
+      <div class="stats">
+        <div class="stat"><b>24</b><span>ファイル</span></div>
+        <div class="stat"><b>4,669</b><span>行のコード</span></div>
+        <div class="stat"><b>0</b><span>枚の同梱アート素材</span></div>
+        <div class="stat"><b>100%</b><span>公開APIのみ使用</span></div>
+      </div>
+    </div>
+    <div class="cubes" aria-hidden="true">
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#6DBB57"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#7FB2E8"/><polygon points="3,29 50,56 50,112 3,85" fill="#3B7DC8"/><polygon points="97,29 50,56 50,112 97,85" fill="#2A62A6"/></g></svg>
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F6C767"/><polygon points="3,29 50,56 50,112 3,85" fill="#E8A33D"/><polygon points="97,29 50,56 50,112 97,85" fill="#C9821F"/></g></svg>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">もくじ</p>
+  <div class="links">
+    <a href="#intro"><span class="chip" style="background:var(--grass)"></span>このデモとは</a>
+    <a href="#play"><span class="chip" style="background:var(--dirt)"></span>あそびかた</a>
+    <a href="#glossary"><span class="chip" style="background:var(--stone)"></span>用語ミニ辞典</a>
+    <a href="#arch"><span class="chip" style="background:var(--stone)"></span>全体の地図</a>
+    <a href="#boot"><span class="chip" style="background:var(--glow)"></span>起動の流れ</a>
+    <a href="#worldgen"><span class="chip" style="background:var(--grass)"></span>地形のつくりかた</a>
+    <a href="#light"><span class="chip" style="background:var(--glow)"></span>光のしくみ</a>
+    <a href="#pixel"><span class="chip" style="background:var(--stone)"></span>ブロックが絵になるまで</a>
+    <a href="#loop"><span class="chip" style="background:var(--water)"></span>毎フレームの仕事</a>
+    <a href="#edit"><span class="chip" style="background:var(--dirt)"></span>壊す・置くと何が起きる？</a>
+    <a href="#sim"><span class="chip" style="background:var(--water)"></span>水と砂の物理</a>
+    <a href="#mobs"><span class="chip" style="background:var(--pig)"></span>動物たち</a>
+    <a href="#save"><span class="chip" style="background:var(--stone)"></span>セーブ＆ロード</a>
+    <a href="#themes"><span class="chip" style="background:var(--grass)"></span>3つの設計テーマ</a>
+    <a href="#files"><span class="chip" style="background:var(--stone)"></span>ファイル一覧</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="intro">
+  <p class="ch">第1章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#6DBB57"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>このデモとは</h2>
+  <p class="lede">「Minecraft みたいなゲームって、どう作られているの？」に、動くコードで答えてくれるサンプルです。</p>
+  <p>このデモは、Babylon.js ファミリーの新しい WebGPU 専用ランタイム <b>Babylon Lite</b> の公式リポジトリに含まれる、いちばん大きなサンプルです。ブラウザの中に草原・森・砂漠・雪山・海のある世界が生成され、歩き回ってブロックを壊したり置いたりできます。時間が経つと夕焼けになり、夜には星空の下でグロウストーンが光ります。</p>
+  <p>プログラムとしての特徴は次の3点です。</p>
+  <div class="grid3">
+    <div class="term"><b>🌱 世界は「種」から生える</b><p>地形データを保存せず、seed（種になる数字）から毎回同じ世界を計算で再現します。だからセーブデータが極端に小さい。</p></div>
+    <div class="term"><b>🎨 アート素材ゼロ</b><p>ブロックの絵はフリー素材（Kenney Voxel Pack, CC0）を実行時に取得。動物は箱を組み合わせてコードだけで作ります。</p></div>
+    <div class="term"><b>⏱️ 全部に「予算」がある</b><p>重い処理はぜんぶ「1フレームに◯回まで」と上限が決まっていて、どんなに忙しくてもカクつかない設計です。</p></div>
+  </div>
+</section>
+
+<section id="play">
+  <p class="ch">第2章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#B98A5C"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>あそびかた</h2>
+  <p class="lede">コードを読む前に、まず遊んでみるのがいちばんの近道です。画面をクリックするとマウスが視点操作モードになります。</p>
+  <table>
+    <tr><th style="width:38%">操作</th><th>すること</th></tr>
+    <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>歩く（<kbd>Shift</kbd> 押しっぱなしでダッシュ）</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>ジャンプ。水の中では押しっぱなしで浮上、離すとゆっくり沈む</td></tr>
+    <tr><td>マウス移動</td><td>視点を動かす</td></tr>
+    <tr><td>左クリック</td><td>ブロックを壊す（岩盤だけは壊せない）</td></tr>
+    <tr><td>右クリック</td><td>手に持ったブロックを置く</td></tr>
+    <tr><td><kbd>1</kbd>〜<kbd>0</kbd> / <kbd>Tab</kbd></td><td>ホットバー（手持ちブロック10種）の切り替え</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>世界をファイルに保存 / ファイルから読み込み</td></tr>
+    <tr><td><kbd>F3</kbd></td><td>デバッグ表示（FPS・座標・チャンク数など）の切り替え</td></tr>
+  </table>
+  <div class="callout"><b>💡 かくし機能</b><p>URL の後ろに <code class="inline">?time=0.75</code> を付けて開くと夕焼けから、<code class="inline">?time=0</code> なら真夜中からスタートします（0〜1 で1日を表します。0.25 が日の出、0.5 が正午）。</p></div>
+</section>
+
+<section id="glossary">
+  <p class="ch">第3章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>用語ミニ辞典</h2>
+  <p class="lede">この先の章で出てくることばを先にまとめて紹介します。分からなくなったらここに戻ってきてください。</p>
+  <div class="grid2">
+    <div class="term"><b>ボクセル</b><p>「立体のピクセル」。この世界はすべて 1m 角のブロック（ボクセル）でできていて、あるかないか・何のブロックかを数字1つで表します。</p></div>
+    <div class="term"><b>チャンク</b><p>世界を 16×16 ブロックの「土地の区画」に分けたもの（高さは96）。区画ごとに生成・描画・破棄することで、無限に続く世界を有限のメモリで扱えます。</p></div>
+    <div class="term"><b>メッシュ</b><p>GPU が描ける形式＝三角形の集まり。ブロックのデータ（数字の並び）は、描く前に必ずメッシュへ変換します。</p></div>
+    <div class="term"><b>面カリング</b><p>ブロック同士がくっついて隠れている面は、絶対に見えないので三角形を作らない工夫。地中の面をぜんぶ省けるので、三角形の数が劇的に減ります。</p></div>
+    <div class="term"><b>AO（アンビエントオクルージョン）</b><p>「隅っこは暗くなる」現象の再現。ブロックの角や溝がうっすら暗くなるだけで、絵に立体感が生まれます。</p></div>
+    <div class="term"><b>fBm ノイズ</b><p>なめらかなランダム模様を作る計算。周波数を変えて何層も重ねる（fractional Brownian motion）と、大陸→丘→凸凹という自然な地形になります。</p></div>
+    <div class="term"><b>BFS（幅優先探索）</b><p>水面に石を落とした波紋のように、近い場所から順に広げていく探索。このデモでは光が広がる様子の計算に使います。</p></div>
+    <div class="term"><b>シェーダ / WGSL</b><p>GPU の上で動く小さなプログラム。WGSL は WebGPU 用のシェーダ言語です。頂点を動かしたり（水の波）、色を決めたり（霧・夕焼け）します。</p></div>
+    <div class="term"><b>テクスチャアトラス</b><p>たくさんの小さな画像を1枚の大きな画像（シール台紙のようなもの）にまとめたもの。テクスチャの切り替えが不要になり、描画が速くなります。</p></div>
+    <div class="term"><b>決定論的（deterministic）</b><p>同じ入力なら必ず同じ結果になる性質。このデモの地形は seed から決定論的に計算されるので、「保存」も「隣のチャンクとの整合」もタダで手に入ります。</p></div>
+  </div>
+</section>
+
+<section id="arch">
+  <p class="ch">第4章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>全体の地図</h2>
+  <p class="lede">エントリポイントの <code class="inline">minecraft.ts</code> はたった 236 行。オーケストラの指揮者のように、実際の演奏（実装）は 23 のコンポーネントに任せています。</p>
+  <pre class="mermaid">
+flowchart TD
+    MAIN["minecraft.ts（236行）<br/>ぜんぶの組み立てとフレームループ"]
+    subgraph FEATURE["機能・ゲームロジック層 ─ 約1,860行"]
+        direction LR
+        CTRL["controls<br/>操作と移動"]
+        WSIM["water-sim<br/>水の流れ"]
+        FALL["falling-blocks<br/>砂の落下"]
+        MOBS["mobs<br/>動物"]
+        LGT["lighting<br/>昼夜の司令塔"]
+    end
+    subgraph RENDER["描画・マテリアル層 ─ 約1,384行"]
+        direction LR
+        CR["chunk-renderer<br/>チャンク出し入れ係"]
+        MESH["mesher<br/>三角形づくり"]
+        VMAT["voxel-material<br/>WGSLシェーダ"]
+        ENV["sky / clouds /<br/>particles / highlight"]
+    end
+    subgraph WORLDL["ワールド生成・照明層 ─ 714行"]
+        direction LR
+        WORLD["world<br/>ブロック保管庫"]
+        GEN["worldgen<br/>地形の計算"]
+        WLGT["world-light<br/>明るさの計算"]
+    end
+    subgraph BASE["基盤層 ─ 476行"]
+        direction LR
+        BLK["blocks<br/>ブロック図鑑"]
+        NOISE["noise<br/>決定論ノイズ"]
+        UTIL["raycast / audio /<br/>constants"]
+    end
+    MAIN --> FEATURE
+    FEATURE --> RENDER
+    RENDER --> WORLDL
+    WORLDL --> BASE
+  </pre>
+  <p>矢印は「上の層が下の層を利用する」という依存の向きです。下の層ほど土台に近く、<code class="inline">constants.ts</code>（チャンクの寸法などを決める定数、わずか18行）と <code class="inline">noise.ts</code> は他に何も依存しません。逆に <code class="inline">minecraft.ts</code> は組み立てるだけで、ゲームのルールを1つも持っていません。この「<b>薄い入口＋役割ごとの部品</b>」という形は、大きなプログラムを読むときの目印になります。</p>
+  <div class="callout grass"><b>🔍 読みはじめるなら</b><p>おすすめの読書順は、①<code class="inline">constants.ts</code>（18行）→ ②<code class="inline">blocks.ts</code> → ③<code class="inline">worldgen.ts</code> → ④<code class="inline">mesher.ts</code> → ⑤<code class="inline">minecraft.ts</code>。小さい部品から読むと、指揮者のコードが「知ってる部品の組み立て」に見えてきます。</p></div>
+</section>
+
+<section id="boot">
+  <p class="ch">第5章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F6C767"/><polygon points="3,29 50,56 50,112 3,85" fill="#E8A33D"/><polygon points="97,29 50,56 50,112 97,85" fill="#C9821F"/></g></svg>起動の流れ</h2>
+  <p class="lede">ページを開いてから世界が表示されるまで、プログラムは5つのステップを順番に進みます。</p>
+  <pre class="mermaid">
+flowchart TD
+    A["① エンジンとシーンを用意<br/>createEngine / createSceneContext"]
+    B["② テクスチャの台紙づくり<br/>Kenney の PNG を fetch して1枚のアトラスに合成"]
+    C["③ 世界と部品を生成<br/>World・レンダラー・水・落下・動物・HUD…"]
+    D["④ warmAround：準備運動<br/>海を先に満たし、周囲13×13チャンクを一気にメッシュ化"]
+    E["⑤ registerScene → startEngine<br/>描画ループ開始！"]
+    A --> B --> C --> D --> E
+  </pre>
+  <p>ポイントは④の <code class="inline">warmAround()</code> です。ふだんチャンクのメッシュ化は「1フレームに3個まで」という予算で少しずつ進みますが、最初の1回だけは予算を無制限にして、プレイヤーの周囲をぜんぶ作り切ってからループを始めます。おかげで、世界が虫食いのままチラチラ現れる「ポップイン」が起きません。</p>
+  <figure class="fig">
+  <svg viewBox="0 0 640 400" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="起動時に読み込まれるチャンクの俯瞰図" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><rect x="64" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="108" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="130" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="152" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="174" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="196" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="218" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="240" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="262" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="284" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="306" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="328" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="350" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="372" y="26" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="48" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="48" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="48" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="70" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="70" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="70" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="92" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="92" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="92" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="114" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="114" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="114" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="136" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="136" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="136" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="158" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="158" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="158" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="180" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="180" width="22" height="22" fill="#CBE3BF" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="180" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="180" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="202" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="202" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="202" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="224" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="224" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="224" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="246" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="246" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="246" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="268" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="268" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="268" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="290" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="290" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="290" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="312" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="108" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="130" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="152" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="174" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="196" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="218" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="240" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="262" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="284" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="306" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="328" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="350" y="312" width="22" height="22" fill="#EDF4EA" stroke="#C6D1BF" stroke-width="0.6"/><rect x="372" y="312" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="64" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="86" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="108" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="130" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="152" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="174" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="196" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="218" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="240" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="262" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="284" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="306" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="328" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="350" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><rect x="372" y="334" width="22" height="22" fill="#FBFAF6" stroke="#E4E9E0" stroke-width="0.4"/><circle cx="229" cy="191" r="66" fill="none" stroke="#78848F" stroke-width="1.2" stroke-dasharray="5 4"/><circle cx="229" cy="191" r="125" fill="none" stroke="#78848F" stroke-width="1.2" stroke-dasharray="5 4"/><circle cx="229" cy="191" r="6" fill="#263228"/><line x1="357" y1="63" x2="414" y2="70" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="420" y="74" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >読み込み済みチャンク（13×13）</text><line x1="286" y1="158" x2="414" y2="130" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="420" y="134" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >霧のはじまり（48ブロック先）</text><line x1="237" y1="191" x2="414" y2="190" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="420" y="194" fill="#263228" font-size="12" text-anchor="start" font-weight="500"  >プレイヤー</text><line x1="346" y1="234" x2="414" y2="250" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="420" y="254" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >霧で真っ白（91ブロック先）</text><text x="320" y="384" fill="#5C6B5E" font-size="12" text-anchor="middle" font-weight="400"  >近い順に1フレーム3個ずつメッシュ化され、離れすぎたチャンクは捨てられる</text></svg>
+  <figcaption>起動時の warmAround はこの13×13をぜんぶ作ってからループを始める。ふだんは遠くの生成境界を霧がちょうど隠す。</figcaption>
+  </figure>
+
+  <p>同時に、海の底に口を開けた洞窟へ先に水を流し込んでおきます（プリフラッド）。これをサボると、海中なのに空気で満たされた不自然な「乾いた穴」が最初のフレームに見えてしまうのです。</p>
+</section>
+
+<section id="worldgen">
+  <p class="ch">第6章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#6DBB57"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>地形のつくりかた</h2>
+  <p class="lede">担当：<code class="inline">worldgen.ts</code>（197行）と <code class="inline">noise.ts</code>（82行）。世界のすべては seed という1つの数字（このデモでは 1337）から計算されます。</p>
+  <pre class="mermaid">
+flowchart TD
+    S["seed と座標 (x, z)"] --> H["高さを決める<br/>大陸＋丘＋細かい凸凹の3層ノイズ"]
+    S --> T["気温と湿度を決める<br/>べつの低周波ノイズ2枚"]
+    H --> B["バイオーム判定<br/>海・砂浜・砂漠・平原・森・雪"]
+    T --> B
+    B --> F["柱を下から積む<br/>岩盤→石(鉱石まじり)→土→表面ブロック"]
+    F --> C["洞窟をくり抜く<br/>3Dノイズが濃い場所を空気に"]
+    C --> W["海面より低ければ水を注ぐ"]
+    W --> V["木とサボテンを植える"]
+  </pre>
+
+  <figure class="fig">
+  <svg viewBox="0 0 640 310" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="3つの周波数のノイズを足して地形をつくる図" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><text x="80" y="26" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >大きなうねり（大陸・波長220）</text><polyline points="80,37.752 84,38.9281 88,40.1539 92,41.4207 96,42.7196 100,44.0415 104,45.3772 108,46.7172 112,48.0522 116,49.3727 120,50.6697 124,51.9339 128,53.1564 132,54.3288 136,55.4427 140,56.4904 144,57.4645 148,58.3582 152,59.1653 156,59.8799 160,60.4973 164,61.0129 168,61.4232 172,61.7254 176,61.9172 180,61.9974 184,61.9654 188,61.8214 192,61.5664 196,61.2023 200,60.7315 204,60.1573 208,59.4839 212,58.7159 216,57.8587 220,56.9183 224,55.9013 228,54.8149 232,53.6667 236,52.4646 240,51.2173 244,49.9333 248,48.6217 252,47.2918 256,45.9528 260,44.6141 264,43.2852 268,41.9753 272,40.6936 276,39.4491 280,38.2506 284,37.1065 288,36.0247 292,35.0129 296,34.0782 300,33.227 304,32.4655 308,31.7989 312,31.232 316,30.7686 320,30.412 324,30.1648 328,30.0287 332,30.0046 336,30.0927 340,30.2923 344,30.6022 348,31.02 352,31.5429 356,32.1673 360,32.8886 364,33.7019 368,34.6015 372,35.581 376,36.6337 380,37.752 384,38.9281 388,40.1539 392,41.4207 396,42.7196 400,44.0415 404,45.3772 408,46.7172 412,48.0522 416,49.3727 420,50.6697 424,51.9339 428,53.1564 432,54.3288 436,55.4427 440,56.4904 444,57.4645 448,58.3582 452,59.1653 456,59.8799 460,60.4973 464,61.0129 468,61.4232 472,61.7254 476,61.9172 480,61.9974 484,61.9654 488,61.8214 492,61.5664 496,61.2023 500,60.7315 504,60.1573 508,59.4839 512,58.7159 516,57.8587 520,56.9183 524,55.9013 528,54.8149 532,53.6667 536,52.4646 540,51.2173 544,49.9333 548,48.6217 552,47.2918 556,45.9528 560,44.6141 564,43.2852 568,41.9753 572,40.6936 576,39.4491 580,38.2506 584,37.1065 588,36.0247 592,35.0129 596,34.0782 600,33.227 604,32.4655 608,31.7989 612,31.232 616,30.7686 620,30.412" fill="none" stroke="#57A045" stroke-width="2.5" stroke-linejoin="round"/><text x="44" y="78" fill="#263228" font-size="20" text-anchor="middle" font-weight="500"  >＋</text><text x="80" y="78" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >中くらいの波（丘・波長70）</text><polyline points="80,87.6116 84,87.0507 88,87.1125 92,87.7928 96,89.0441 100,90.7794 104,92.8779 108,95.1937 112,97.5656 116,99.8286 120,101.825 124,103.416 128,104.492 132,104.976 136,104.836 140,104.081 144,102.763 148,100.975 152,98.8413 156,96.5095 160,94.1422 164,91.9042 168,89.9512 172,88.4191 176,87.4145 180,87.0072 184,87.2258 188,88.0548 192,89.4367 196,91.2753 200,93.4426 204,95.7879 208,98.148 212,100.359 216,102.266 220,103.737 224,104.67 228,105 232,104.703 236,103.801 240,102.356 244,100.469 248,98.2707 252,95.9145 256,93.5642 260,91.3835 264,89.524 268,88.1151 272,87.2548 276,87.0031 280,87.3773 284,88.3516 288,89.858 292,91.7919 296,94.0185 300,96.383 304,98.7209 308,100.869 312,102.679 316,104.024 320,104.811 324,104.984 328,104.533 332,103.487 336,101.921 340,99.9428 344,97.6901 348,95.3199 352,92.997 356,90.883 360,89.1251 364,87.8455 368,87.1334 372,87.0382 376,87.5666 380,88.6818 384,90.3063 388,92.3269 392,94.6031 396,96.9765 400,99.2819 404,101.359 408,103.063 412,104.276 416,104.913 420,104.93 424,104.325 428,103.141 432,101.46 436,99.3995 440,97.1022 444,94.7283 448,92.4428 452,90.4049 456,88.7562 460,87.6116 464,87.0507 468,87.1125 472,87.7928 476,89.0441 480,90.7794 484,92.8779 488,95.1937 492,97.5656 496,99.8286 500,101.825 504,103.416 508,104.492 512,104.976 516,104.836 520,104.081 524,102.763 528,100.975 532,98.8413 536,96.5095 540,94.1422 544,91.9042 548,89.9512 552,88.4191 556,87.4145 560,87.0072 564,87.2258 568,88.0548 572,89.4367 576,91.2753 580,93.4426 584,95.7879 588,98.148 592,100.359 596,102.266 600,103.737 604,104.67 608,105 612,104.703 616,103.801 620,102.356" fill="none" stroke="#8A5A33" stroke-width="2.5" stroke-linejoin="round"/><text x="44" y="126" fill="#263228" font-size="20" text-anchor="middle" font-weight="500"  >＋</text><text x="80" y="126" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >こまかい波（凸凹・波長24）</text><polyline points="80,144 84,140.818 88,139.5 92,140.818 96,144 100,147.182 104,148.5 108,147.182 112,144 116,140.818 120,139.5 124,140.818 128,144 132,147.182 136,148.5 140,147.182 144,144 148,140.818 152,139.5 156,140.818 160,144 164,147.182 168,148.5 172,147.182 176,144 180,140.818 184,139.5 188,140.818 192,144 196,147.182 200,148.5 204,147.182 208,144 212,140.818 216,139.5 220,140.818 224,144 228,147.182 232,148.5 236,147.182 240,144 244,140.818 248,139.5 252,140.818 256,144 260,147.182 264,148.5 268,147.182 272,144 276,140.818 280,139.5 284,140.818 288,144 292,147.182 296,148.5 300,147.182 304,144 308,140.818 312,139.5 316,140.818 320,144 324,147.182 328,148.5 332,147.182 336,144 340,140.818 344,139.5 348,140.818 352,144 356,147.182 360,148.5 364,147.182 368,144 372,140.818 376,139.5 380,140.818 384,144 388,147.182 392,148.5 396,147.182 400,144 404,140.818 408,139.5 412,140.818 416,144 420,147.182 424,148.5 428,147.182 432,144 436,140.818 440,139.5 444,140.818 448,144 452,147.182 456,148.5 460,147.182 464,144 468,140.818 472,139.5 476,140.818 480,144 484,147.182 488,148.5 492,147.182 496,144 500,140.818 504,139.5 508,140.818 512,144 516,147.182 520,148.5 524,147.182 528,144 532,140.818 536,139.5 540,140.818 544,144 548,147.182 552,148.5 556,147.182 560,144 564,140.818 568,139.5 572,140.818 576,144 580,147.182 584,148.5 588,147.182 592,144 596,140.818 600,139.5 604,140.818 608,144 612,147.182 616,148.5 620,147.182" fill="none" stroke="#78848F" stroke-width="2.5" stroke-linejoin="round"/><text x="44" y="190" fill="#263228" font-size="20" text-anchor="middle" font-weight="500"  >＝</text><text x="80" y="190" fill="#263228" font-size="12" text-anchor="start" font-weight="500"  >できあがる地形の断面</text><path d="M80,227.364 L83,225.262 L86,224.381 L89,225.279 L92,228.031 L95,232.196 L98,236.958 L101,241.391 L104,244.755 L107,246.727 L110,247.491 L113,247.654 L116,248.019 L119,249.294 L122,251.828 L125,255.481 L128,259.648 L131,263.454 L134,266.035 L137,266.828 L140,265.753 L143,263.247 L146,260.121 L149,257.296 L152,255.507 L155,255.071 L158,255.799 L161,257.078 L164,258.099 L167,258.149 L170,256.87 L173,254.399 L176,251.332 L179,248.539 L182,246.876 L185,246.904 L188,248.694 L191,251.807 L194,255.426 L197,258.628 L200,260.674 L203,261.246 L206,260.531 L209,259.144 L212,257.892 L215,257.493 L218,258.304 L221,260.195 L224,262.571 L227,264.569 L230,265.335 L233,264.317 L236,261.448 L239,257.174 L242,252.317 L245,247.809 L248,244.392 L251,242.393 L254,241.629 L257,241.493 L260,241.18 L263,239.981 L266,237.541 L269,233.997 L272,229.948 L275,226.263 L278,223.799 L281,223.112 L284,224.276 L287,226.848 L290,230.011 L293,232.84 L296,234.597 L299,234.961 L302,234.122 L305,232.694 L308,231.486 L311,231.216 L314,232.246 L317,234.445 L320,237.223 L323,239.716 L326,241.076 L329,240.751 L332,238.674 L335,235.294 L338,231.432 L341,228.017 L344,225.792 L347,225.078 L350,225.689 L353,227.01 L356,228.232 L359,228.637 L362,227.861 L365,226.031 L368,223.735 L371,221.832 L374,221.167 L377,222.287 L380,225.252 L383,229.609 L386,234.533 L389,239.087 L392,242.524 L395,244.517 L398,245.248 L401,245.325 L404,245.554 L407,246.648 L410,248.966 L413,252.376 L416,256.286 L419,259.833 L422,262.167 L425,262.738 L428,261.479 L431,258.84 L434,255.64 L437,252.811 L440,251.093 L443,250.807 L446,251.764 L449,253.35 L452,254.752 L455,255.249 L458,254.474 L461,252.55 L464,250.064 L467,247.869 L470,246.808 L473,247.425 L476,249.779 L479,253.416 L482,257.509 L485,261.124 L488,263.515 L491,264.359 L494,263.841 L497,262.575 L500,261.375 L503,260.96 L506,261.699 L509,263.471 L512,265.692 L515,267.511 L518,268.089 L521,266.886 L524,263.847 L527,259.431 L530,254.469 L533,249.9 L536,246.474 L539,244.52 L542,243.854 L545,243.869 L548,243.755 L551,242.795 L554,240.626 L557,237.373 L560,233.621 L563,230.228 L566,228.036 L569,227.59 L572,228.948 L575,231.658 L578,234.893 L581,237.719 L584,239.394 L587,239.596 L590,238.514 L593,236.763 L596,235.162 L599,234.435 L602,234.953 L605,236.6 L608,238.799 L611,240.7 L614,241.469 L617,240.57 L620,237.95 L620,295 L80,295 Z" fill="#C89A6B"/><path d="M128,256 L128,259.648 L131,263.454 L134,266.035 L137,266.828 L140,265.753 L143,263.247 L146,260.121 L149,257.296 L152,255.507 L152,256 Z" fill="#7FB2E8" opacity="0.9"/><path d="M161,256 L161,257.078 L164,258.099 L167,258.149 L170,256.87 L173,254.399 L173,256 Z" fill="#7FB2E8" opacity="0.9"/><path d="M197,256 L197,258.628 L200,260.674 L203,261.246 L206,260.531 L209,259.144 L212,257.892 L215,257.493 L218,258.304 L221,260.195 L224,262.571 L227,264.569 L230,265.335 L233,264.317 L236,261.448 L239,257.174 L242,252.317 L242,256 Z" fill="#7FB2E8" opacity="0.9"/><path d="M416,256 L416,256.286 L419,259.833 L422,262.167 L425,262.738 L428,261.479 L431,258.84 L434,255.64 L434,256 Z" fill="#7FB2E8" opacity="0.9"/><path d="M482,256 L482,257.509 L485,261.124 L488,263.515 L491,264.359 L494,263.841 L497,262.575 L500,261.375 L503,260.96 L506,261.699 L509,263.471 L512,265.692 L515,267.511 L518,268.089 L521,266.886 L524,263.847 L527,259.431 L530,254.469 L530,256 Z" fill="#7FB2E8" opacity="0.9"/><polyline points="80,227.364 83,225.262 86,224.381 89,225.279 92,228.031 95,232.196 98,236.958 101,241.391 104,244.755 107,246.727 110,247.491 113,247.654 116,248.019 119,249.294 122,251.828 125,255.481 128,259.648 131,263.454 134,266.035 137,266.828 140,265.753 143,263.247 146,260.121 149,257.296 152,255.507 155,255.071 158,255.799 161,257.078 164,258.099 167,258.149 170,256.87 173,254.399 176,251.332 179,248.539 182,246.876 185,246.904 188,248.694 191,251.807 194,255.426 197,258.628 200,260.674 203,261.246 206,260.531 209,259.144 212,257.892 215,257.493 218,258.304 221,260.195 224,262.571 227,264.569 230,265.335 233,264.317 236,261.448 239,257.174 242,252.317 245,247.809 248,244.392 251,242.393 254,241.629 257,241.493 260,241.18 263,239.981 266,237.541 269,233.997 272,229.948 275,226.263 278,223.799 281,223.112 284,224.276 287,226.848 290,230.011 293,232.84 296,234.597 299,234.961 302,234.122 305,232.694 308,231.486 311,231.216 314,232.246 317,234.445 320,237.223 323,239.716 326,241.076 329,240.751 332,238.674 335,235.294 338,231.432 341,228.017 344,225.792 347,225.078 350,225.689 353,227.01 356,228.232 359,228.637 362,227.861 365,226.031 368,223.735 371,221.832 374,221.167 377,222.287 380,225.252 383,229.609 386,234.533 389,239.087 392,242.524 395,244.517 398,245.248 401,245.325 404,245.554 407,246.648 410,248.966 413,252.376 416,256.286 419,259.833 422,262.167 425,262.738 428,261.479 431,258.84 434,255.64 437,252.811 440,251.093 443,250.807 446,251.764 449,253.35 452,254.752 455,255.249 458,254.474 461,252.55 464,250.064 467,247.869 470,246.808 473,247.425 476,249.779 479,253.416 482,257.509 485,261.124 488,263.515 491,264.359 494,263.841 497,262.575 500,261.375 503,260.96 506,261.699 509,263.471 512,265.692 515,267.511 518,268.089 521,266.886 524,263.847 527,259.431 530,254.469 533,249.9 536,246.474 539,244.52 542,243.854 545,243.869 548,243.755 551,242.795 554,240.626 557,237.373 560,233.621 563,230.228 566,228.036 569,227.59 572,228.948 575,231.658 578,234.893 581,237.719 584,239.394 587,239.596 590,238.514 593,236.763 596,235.162 599,234.435 602,234.953 605,236.6 608,238.799 611,240.7 614,241.469 617,240.57 620,237.95" fill="none" stroke="#57A045" stroke-width="3" stroke-linejoin="round"/><line x1="80" y1="256" x2="620" y2="256" stroke="#205693" stroke-width="1.4" stroke-dasharray="7 5"/><text x="140" y="250" fill="#205693" font-size="12" text-anchor="middle" font-weight="500"  >海面</text></svg>
+  <figcaption>周波数のちがうノイズを足し算すると、大陸のうねり・丘・地表の凸凹をあわせ持つ地形になる（fBm）。海面より低いくぼみは自動的に湖や海になる。</figcaption>
+  </figure>
+  <h3>バイオームの決まりかた</h3>
+  <p>高さと「気温・湿度」の2つのノイズから、上から順に条件を当てはめて決まります。</p>
+  <table>
+    <tr><th style="width:52%">条件（上から順に判定）</th><th>バイオーム</th></tr>
+    <tr><td>高さが海面より低い</td><td>🌊 海</td></tr>
+    <tr><td>海面すれすれ（±1ブロック）</td><td>🏖️ 砂浜</td></tr>
+    <tr><td>海面から38ブロック以上高い</td><td>🏔️ 雪山（山頂だけ雪化粧）</td></tr>
+    <tr><td>気温 &lt; 0.28</td><td>❄️ 雪原</td></tr>
+    <tr><td>気温 &gt; 0.55 かつ 湿度 &lt; 0.42</td><td>🏜️ 砂漠</td></tr>
+    <tr><td>湿度 &gt; 0.55</td><td>🌲 森</td></tr>
+    <tr><td>それ以外</td><td>🌾 平原</td></tr>
+  </table>
+  <div class="callout grass"><b>🌳 「隣の木」問題のかしこい解きかた</b><p>木の幹が隣のチャンクに生えていても、葉っぱはこちらのチャンクにはみ出してきます。このデモは自分のチャンクの外周2ブロックまで「木が生えるか」を余分に調べて、はみ出す葉を正しく描きます。地形の計算が seed と座標だけで決まる純粋な関数なので、隣のチャンクのデータを見なくても答えが必ず一致する──決定論のご利益です。</p></div>
+  <p>鉱石は深さで出やすさが変わります。ダイヤは深さ14未満でおよそ0.8%、金は22未満で1%、鉄と石炭はどこでも数%。洞窟は海面+8より深い場所だけに掘られるので、山の中腹に不自然な横穴が開くことはありません。</p>
+</section>
+
+<section id="light">
+  <p class="ch">第7章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F6C767"/><polygon points="3,29 50,56 50,112 3,85" fill="#E8A33D"/><polygon points="97,29 50,56 50,112 97,85" fill="#C9821F"/></g></svg>光のしくみ</h2>
+  <p class="lede">担当：<code class="inline">world-light.ts</code>（317行）。洞窟に潜ると暗くなり、グロウストーンを置くと周りが照らされる。あの「Minecraft らしい光」の正体です。</p>
+  <p>各ボクセルは <b>0〜15 の明るさを2種類</b>持ちます。空から届く「スカイライト」と、光るブロックが放つ「ブロックライト」です。光は1ブロック進むごとに1ずつ弱まりながら、波紋のように広がります（BFS）。この2つの値を1バイトに詰めて、チャンクごとにキャッシュします。</p>
+  <figure class="fig">
+  <svg viewBox="0 0 640 336" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="地面の断面図とスカイライト・ブロックライトの広がり" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><rect x="48" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="82" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="116" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="150" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="184" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="218" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="252" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="286" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="320" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="354" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="388" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="422" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="456" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="490" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="524" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="558" y="34" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="48" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="82" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="116" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="150" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="184" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="218" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="252" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="286" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="320" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="354" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="388" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="422" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="456" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="490" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="524" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="558" y="68" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="48" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="82" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="116" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="150" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="184" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="218" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="252" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="286" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="320" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="354" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="388" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="422" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="456" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="490" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="524" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="558" y="102" width="34" height="34" fill="#E4F0FA" stroke="#D3E4F2" stroke-width="0.6"/><rect x="48" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="82" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="116" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="150" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="184" y="136" width="34" height="34" fill="#FFF2CD" stroke="#CDBF9C" stroke-width="0.6"/><rect x="218" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="252" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="286" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="320" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="354" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="388" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="422" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="456" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="490" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="524" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="558" y="136" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="48" y="170" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="82" y="170" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="116" y="170" width="34" height="34" fill="#E7DBB9" stroke="#CDBF9C" stroke-width="0.6"/><rect x="150" y="170" width="34" height="34" fill="#F3E6C3" stroke="#CDBF9C" stroke-width="0.6"/><rect x="184" y="170" width="34" height="34" fill="#FFF2CD" stroke="#CDBF9C" stroke-width="0.6"/><rect x="218" y="170" width="34" height="34" fill="#F3E6C3" stroke="#CDBF9C" stroke-width="0.6"/><rect x="252" y="170" width="34" height="34" fill="#E7DBB9" stroke="#CDBF9C" stroke-width="0.6"/><rect x="286" y="170" width="34" height="34" fill="#DBD0B0" stroke="#CDBF9C" stroke-width="0.6"/><rect x="320" y="170" width="34" height="34" fill="#E7DBB9" stroke="#CDBF9C" stroke-width="0.6"/><rect x="354" y="170" width="34" height="34" fill="#F3E6C3" stroke="#CDBF9C" stroke-width="0.6"/><rect x="388" y="170" width="34" height="34" fill="#F6C767" stroke="#B57414" stroke-width="2"/><rect x="422" y="170" width="34" height="34" fill="#F3E6C3" stroke="#CDBF9C" stroke-width="0.6"/><rect x="456" y="170" width="34" height="34" fill="#E7DBB9" stroke="#CDBF9C" stroke-width="0.6"/><rect x="490" y="170" width="34" height="34" fill="#DBD0B0" stroke="#CDBF9C" stroke-width="0.6"/><rect x="524" y="170" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="558" y="170" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="48" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="82" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="116" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="150" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="184" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="218" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="252" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="286" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="320" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="354" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="388" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="422" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="456" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="490" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="524" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="558" y="204" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="48" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="82" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="116" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="150" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="184" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="218" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="252" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="286" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="320" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="354" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="388" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="422" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="456" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="490" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="524" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><rect x="558" y="238" width="34" height="34" fill="#B98A5C" stroke="#8A5A33" stroke-width="0.8"/><line x1="386" y1="168" x2="379" y2="161" stroke="#B57414" stroke-width="2" stroke-linecap="round"/><line x1="424" y1="168" x2="431" y2="161" stroke="#B57414" stroke-width="2" stroke-linecap="round"/><line x1="386" y1="206" x2="379" y2="213" stroke="#B57414" stroke-width="2" stroke-linecap="round"/><line x1="424" y1="206" x2="431" y2="213" stroke="#B57414" stroke-width="2" stroke-linecap="round"/><text x="201" y="158" fill="#B57414" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >15</text><text x="201" y="192" fill="#B57414" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >15</text><text x="167" y="192" fill="#B57414" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >14</text><text x="133" y="192" fill="#B57414" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >13</text><text x="235" y="192" fill="#B57414" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >14</text><text x="269" y="192" fill="#B57414" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >13</text><text x="303" y="192" fill="#B57414" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >12</text><text x="337" y="192" fill="#C9542A" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >13</text><text x="371" y="192" fill="#C9542A" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >14</text><text x="439" y="192" fill="#C9542A" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >14</text><text x="473" y="192" fill="#C9542A" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >13</text><text x="507" y="192" fill="#C9542A" font-size="13" text-anchor="middle" font-weight="700" font-family="'M PLUS 1 Code',monospace" >12</text><circle cx="86" cy="62" r="12" fill="#F6C767" stroke="#E8A33D" stroke-width="2"/><line x1="102" y1="62" x2="107" y2="62" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><line x1="97.3137" y1="73.3137" x2="100.849" y2="76.8492" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><line x1="86" y1="78" x2="86" y2="83" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><line x1="74.6863" y1="73.3137" x2="71.1508" y2="76.8492" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><line x1="70" y1="62" x2="65" y2="62" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><line x1="74.6863" y1="50.6863" x2="71.1508" y2="47.1508" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><line x1="86" y1="46" x2="86" y2="41" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><line x1="97.3137" y1="50.6863" x2="100.849" y2="47.1508" stroke="#E8A33D" stroke-width="1.6" stroke-linecap="round"/><text x="330" y="64" fill="#4A6E8C" font-size="12" text-anchor="start" font-weight="400"  >空の上はどこでも 15</text><line x1="201" y1="92" x2="201" y2="124" stroke="#B57414" stroke-width="2"/><polygon points="195,124 207,124 201,134" fill="#B57414"/><text x="212" y="114" fill="#B57414" font-size="12" text-anchor="start" font-weight="500"  >真下は弱まらない</text><text x="48" y="304" fill="#B57414" font-size="13" text-anchor="start" font-weight="700" font-family="'M PLUS 1 Code',monospace" >15</text><text x="72" y="304" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >＝ スカイライト（空から届く光）</text><text x="330" y="304" fill="#C9542A" font-size="13" text-anchor="start" font-weight="700" font-family="'M PLUS 1 Code',monospace" >14</text><text x="354" y="304" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >＝ ブロックライト（光るブロックから）</text><rect x="48" y="314" width="14" height="14" fill="#F6C767" stroke="#B57414"/><text x="72" y="326" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >＝ グロウストーン（置いた光源）</text><rect x="330" y="314" width="14" height="14" fill="#B98A5C" stroke="#8A5A33"/><text x="354" y="326" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >＝ 土（光をさえぎる）</text></svg>
+  <figcaption>縦穴から入ったスカイライトは真下へは15のまま届き、横穴へ曲がるたびに1ずつ弱まる。グロウストーンは全方向に1ずつ弱まる光をまく。</figcaption>
+  </figure>
+
+  <pre class="mermaid">
+flowchart TD
+    A["パスA：柱ごとに「空の見える床」を探す<br/>上から見て最初の不透明ブロックの1つ上"]
+    B["パスB：床より上を明るさ15で一括塗り"]
+    C["影との境目のセルだけをBFSの出発点にする<br/>まっ平らな地表は伝播不要なのでスキップ"]
+    D["BFSで1ずつ弱めながら広げる<br/>真下方向だけは弱まらない（日光の柱）"]
+    E["中央チャンク分を切り出してキャッシュ"]
+    A --> B --> C --> D --> E
+  </pre>
+  <div class="callout"><b>✨ 継ぎ目が絶対に出ない魔法の数式：15 ＜ 16</b><p>1チャンクの光を計算するとき、周囲16ブロックのマージンを含めた 48×48 の範囲をまとめて計算します。光は最大でも15ブロックしか届かないので、マージンの外の光がこのチャンクに影響することは<b>原理的にありえません</b>。つまり隣のチャンクの光の計算結果を待つ必要がなく、どんな順番で計算してもチャンクの境目に光の段差（シーム）が出ないのです。</p></div>
+  <figure class="fig">
+  <svg viewBox="0 0 640 390" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="1チャンクの光をまわり3×3チャンクで計算する図" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><rect x="60" y="40" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><rect x="160" y="40" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><rect x="260" y="40" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><rect x="60" y="140" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><rect x="160" y="140" width="100" height="100" fill="#EDF4EA" stroke="#57A045" stroke-width="1.6"/><rect x="260" y="140" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><rect x="60" y="240" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><rect x="160" y="240" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><rect x="260" y="240" width="100" height="100" fill="#EFF1F3" stroke="#78848F" stroke-width="0.8"/><line x1="260" y1="28" x2="360" y2="28" stroke="#5C6B5E" stroke-width="1"/><line x1="260" y1="24" x2="260" y2="32" stroke="#5C6B5E" stroke-width="1"/><line x1="360" y1="24" x2="360" y2="32" stroke="#5C6B5E" stroke-width="1"/><text x="310" y="20" fill="#5C6B5E" font-size="12" text-anchor="middle" font-weight="400"  >16ブロック</text><circle cx="175" cy="190" r="94" fill="#E8A33D" opacity="0.18"/><circle cx="175" cy="190" r="94" fill="none" stroke="#E8A33D" stroke-width="1.4" stroke-dasharray="5 4"/><circle cx="175" cy="190" r="5" fill="#B57414"/><line x1="330" y1="70" x2="390" y2="66" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="396" y="70" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >マージン（まわり8チャンク）</text><line x1="252" y1="148" x2="390" y2="126" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="396" y="130" fill="#33702A" font-size="12" text-anchor="start" font-weight="500"  >光を計算したいチャンク</text><line x1="182" y1="190" x2="390" y2="190" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="396" y="194" fill="#B57414" font-size="12" text-anchor="start" font-weight="500"  >光源</text><line x1="243" y1="262" x2="390" y2="250" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="396" y="254" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >伝播はどんなに遠くても15ブロック</text><text x="320" y="376" fill="#263228" font-size="13" text-anchor="middle" font-weight="500"  >15 ＜ 16 ── だから隣のチャンクの光を知らなくても、答えが必ず合う</text></svg>
+  <figcaption>光はまわりのブロック配置（マージン）だけ読めば計算でき、隣のチャンクの「光の計算結果」には依存しない。どの順番で計算しても継ぎ目が出ない理由。</figcaption>
+  </figure>
+
+  <p>さらに面白いのが <code class="inline">_anyEmitters</code> という1個のフラグです。自然の地形には光るブロックが1つも生成されないので、<b>プレイヤーが初めてグロウストーンを置くまで、ブロックライトの計算はまるごとスキップ</b>されます。「起きないことは計算しない」──怠惰は美徳、という好例です。</p>
+</section>
+
+<section id="pixel">
+  <p class="ch">第8章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>ブロックが絵になるまで</h2>
+  <p class="lede">数字の並び（ブロックID）が画面のピクセルになるまで、データは5つの部品をバケツリレーされます。</p>
+  <pre class="mermaid">
+flowchart LR
+    A["worldgen<br/>ノイズから地形"] --> B["world<br/>ブロックの保管庫"]
+    B --> C["world-light<br/>明るさを計算"]
+    C --> D["mesher<br/>見える面だけ三角形に"]
+    D --> E["chunk-renderer<br/>GPUへ登録"]
+    E --> F["voxel-material<br/>WGSLシェーダで着色"]
+  </pre>
+  <h3>mesher：三角形をケチる職人</h3>
+  <p>16×16×96 のチャンクには最大 24,576 個のブロックが入りますが、実際に描くのは「空気に触れている面」だけ（面カリング）。さらに各頂点に、周囲のブロック配置から計算した AO（隅の暗さ）を焼き込みます。芸が細かいのは、四角形を2つの三角形に割るとき、<b>明るい頂点同士を結ぶ向きに対角線をひっくり返す</b>こと。これで AO のグラデーションに折り目が出ません。</p>
+  <figure class="fig">
+  <svg viewBox="0 0 640 258" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="面カリング：内側の面は三角形を作らない図" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><rect x="100" y="64" width="54" height="54" fill="#C89A6B"/><rect x="154" y="64" width="54" height="54" fill="#C89A6B"/><rect x="208" y="64" width="54" height="54" fill="#C89A6B"/><rect x="262" y="64" width="54" height="54" fill="#C89A6B"/><rect x="100" y="118" width="54" height="54" fill="#C89A6B"/><rect x="154" y="118" width="54" height="54" fill="#C89A6B"/><rect x="208" y="118" width="54" height="54" fill="#C89A6B"/><rect x="262" y="118" width="54" height="54" fill="#C89A6B"/><rect x="316" y="118" width="54" height="54" fill="#C89A6B"/><rect x="100" y="172" width="54" height="54" fill="#C89A6B"/><rect x="154" y="172" width="54" height="54" fill="#C89A6B"/><rect x="208" y="172" width="54" height="54" fill="#C89A6B"/><rect x="262" y="172" width="54" height="54" fill="#C89A6B"/><rect x="316" y="172" width="54" height="54" fill="#C89A6B"/><line x1="154" y1="64" x2="154" y2="226" stroke="#6E4425" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.6"/><line x1="208" y1="64" x2="208" y2="226" stroke="#6E4425" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.6"/><line x1="262" y1="64" x2="262" y2="226" stroke="#6E4425" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.6"/><line x1="316" y1="118" x2="316" y2="226" stroke="#6E4425" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.6"/><line x1="100" y1="118" x2="316" y2="118" stroke="#6E4425" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.6"/><line x1="100" y1="172" x2="370" y2="172" stroke="#6E4425" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.6"/><path d="M100,64 L316,64 L316,118 L370,118 L370,226 L100,226 Z" fill="none" stroke="#33702A" stroke-width="4" stroke-linejoin="round"/><text x="343" y="94" fill="#4A6E8C" font-size="12" text-anchor="middle" font-weight="400"  >空気</text><line x1="372" y1="144" x2="430" y2="94" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="436" y="98" fill="#33702A" font-size="12" text-anchor="start" font-weight="500"  >外側の面 → 三角形にする</text><line x1="208" y1="145" x2="430" y2="154" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="436" y="158" fill="#6E4425" font-size="12" text-anchor="start" font-weight="500"  >内側の面 → つくらない</text></svg>
+  <figcaption>ブロック同士がくっついた面（点線）は絶対に見えないので、三角形を作らない。1チャンク最大24,576ブロックでも、GPUに送るのは表面だけ。</figcaption>
+  </figure>
+
+  <figure class="fig">
+  <svg viewBox="0 0 640 290" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="頂点AO：まわり3マスのブロック数で頂点の暗さを決める図" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><rect x="80" y="50" width="96" height="96" fill="#C89A6B" stroke="#8A5A33"/><text x="128" y="102" fill="#6E4425" font-size="12" text-anchor="middle" font-weight="500"  >横のブロック①</text><rect x="176" y="50" width="96" height="96" fill="#C89A6B" stroke="#8A5A33"/><text x="224" y="102" fill="#6E4425" font-size="12" text-anchor="middle" font-weight="500"  >角のブロック</text><rect x="176" y="146" width="96" height="96" fill="#C89A6B" stroke="#8A5A33"/><text x="224" y="198" fill="#6E4425" font-size="12" text-anchor="middle" font-weight="500"  >横のブロック②</text><rect x="80" y="146" width="96" height="96" fill="#E4F0FA" stroke="#D3E4F2"/><text x="128" y="198" fill="#4A6E8C" font-size="12" text-anchor="middle" font-weight="400"  >見ている面</text><circle cx="176" cy="146" r="8" fill="#263228" stroke="#FFFFFF" stroke-width="2.5"/><line x1="176" y1="156" x2="176" y2="258" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="176" y="274" fill="#263228" font-size="12" text-anchor="middle" font-weight="500"  >4マスが出会う点＝頂点</text><text x="320" y="74" fill="#263228" font-size="13" text-anchor="start" font-weight="500"  >まわり3マスのうち、ブロックはいくつ？</text><text x="320" y="104" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >0個 → 明るさ 1.00（そのまま）</text><text x="320" y="130" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >1個 → 明るさ 0.84</text><text x="320" y="156" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >2個 → 明るさ 0.68</text><text x="320" y="182" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >横2つに挟まれたら → 0.50（最も暗い）</text><text x="320" y="218" fill="#6E4425" font-size="12" text-anchor="start" font-weight="500"  >上の例は3個ぜんぶブロック → この頂点は 0.50</text></svg>
+  <figcaption>面の四隅それぞれで「横・横・角」の3マスを数え、暗さを頂点カラーに焼き込む。これだけで溝や角に自然な影が落ちる。</figcaption>
+  </figure>
+
+  <h3>頂点カラーは4項目の「メモ用紙」</h3>
+  <p>各頂点の色（RGBA）には、色ではなく計算結果のメモが詰められています。</p>
+  <table>
+    <tr><th style="width:20%">チャンネル</th><th>入っているもの</th></tr>
+    <tr><td class="num">R</td><td>AO の暗さ（0.5〜1.0 の掛け算係数）</td></tr>
+    <tr><td class="num">G</td><td>スカイライト（空からの光がどれだけ届くか）</td></tr>
+    <tr><td class="num">B</td><td>ブロックライト（グロウストーンの光）</td></tr>
+    <tr><td class="num">A</td><td>「これは水/揺れる葉っぱ」フラグ</td></tr>
+  </table>
+  <h3>voxel-material：1本のシェーダ、3つの顔</h3>
+  <p>WGSL シェーダは1本だけ書かれていて、テンプレートの差し替えで3変種が生まれます。<b>opaque</b>（石や土。ふつうに描く）、<b>cutout</b>(葉やサボテン。透明部分を切り抜き、A フラグが立った葉だけ風に揺れる)、<b>blend</b>（水・ガラス・氷。半透明で、A フラグが立った水面だけ頂点が波打つ）。太陽の向きによる面の明暗はシェーダ側で毎フレーム計算するので、夕日が差すと西向きの面だけ赤く染まります。仕上げに距離に応じた霧をかけ、遠くのチャンクの生成境界を上手に隠します。</p>
+</section>
+
+<section id="loop">
+  <p class="ch">第9章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#7FB2E8"/><polygon points="3,29 50,56 50,112 3,85" fill="#3B7DC8"/><polygon points="97,29 50,56 50,112 97,85" fill="#2A62A6"/></g></svg>毎フレームの仕事</h2>
+  <p class="lede">1秒間に約60回、決まった順番で世界が更新されます。順番そのものが設計です。</p>
+  <pre class="mermaid">
+flowchart TD
+    P["① player.update<br/>移動・視線・壊す/置く"] --> S["② falling / water<br/>砂の落下と水の流れ"]
+    S --> Q["③ renderer.processQueue<br/>新しいチャンクを3個までメッシュ化"]
+    Q --> L["④ lighting.tick<br/>太陽を少し動かし、空と材質の色を更新"]
+    L --> M["⑤ mobs / clouds / particles<br/>動物・雲・粒の更新"]
+    M --> H["⑥ 空をカメラに追従・HUD更新"]
+    H -.次のフレームへ.-> P
+  </pre>
+  <h3>「予算」の一覧表</h3>
+  <p>このデモの秘訣は、重い処理すべてに上限（予算）が設定されていることです。仕事が予算を超えたら、残りは翌フレームに持ち越します。</p>
+  <table>
+    <tr><th>処理</th><th>1フレームの予算</th></tr>
+    <tr><td>チャンクのメッシュ化</td><td>3チャンクまで（起動時のみ無制限）</td></tr>
+    <tr><td>光の計算（3×3領域のフラッド）</td><td>4回まで</td></tr>
+    <tr><td>水の伝播</td><td>4ステップ・1ステップ8,192セルまで</td></tr>
+    <tr><td>落下ブロックの支え確認</td><td>1,024セルまで</td></tr>
+    <tr><td>動物</td><td>同時に10体まで</td></tr>
+  </table>
+  <div class="callout water"><b>⏱️ dt のクランプ</b><p>タブを裏に回して戻ってくると、経過時間（dt）が何秒にもなります。そのまま物理計算すると砂が地面を突き抜けたりするので、dt は最大 0.1 秒に切り詰めてから使います。ゲームループの定番の安全策です。</p></div>
+</section>
+
+<section id="edit">
+  <p class="ch">第10章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#B98A5C"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>壊す・置くと何が起きる？</h2>
+  <p class="lede">左クリックの一瞬に、5つのシステムが連鎖して動きます。ゲームで最も「密度の高い」瞬間です。</p>
+  <pre class="mermaid">
+flowchart TD
+    CLICK["左クリック"] --> RAY["raycast：視線の先のブロックを特定<br/>最大7ブロック先まで、格子を1マスずつたどる"]
+    RAY --> SET["world.setBlock(空気)<br/>変更を「編集差分」として記録"]
+    SET --> INV["光キャッシュを無効化<br/>チャンクの境目なら隣も"]
+    SET --> RM["remeshEdit：触れたチャンクを作り直し<br/>境目なら隣も（AOが変わるため）"]
+    SET --> WN["water.onBreak<br/>穴に水が流れ込むかも？"]
+    SET --> FN["falling：真上をチェック<br/>砂や砂利なら落ちはじめる"]
+    SET --> FX["粒エフェクト＋効果音<br/>音はWebAudioでその場で合成"]
+  </pre>
+  <div class="callout"><b>🎯 「隣まで作り直すのは境目のときだけ」</b><p>初期の実装では1ブロック掘るたびに周囲3×3チャンクの光とメッシュを全部作り直していて、掘るたびにカクついたそうです（コメントに経緯が残っています）。現在は「編集がチャンクの端に触れたときだけ、その方向の隣を作り直す」方式。内側の編集なら作り直しは1チャンクで済みます。パフォーマンス改善の実録として読みごたえがあります。</p></div>
+</section>
+
+<section id="sim">
+  <p class="ch">第11章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#7FB2E8"/><polygon points="3,29 50,56 50,112 3,85" fill="#3B7DC8"/><polygon points="97,29 50,56 50,112 97,85" fill="#2A62A6"/></g></svg>水と砂の物理</h2>
+  <p class="lede">担当：<code class="inline">water-sim.ts</code>（331行）と <code class="inline">falling-blocks.ts</code>（260行）。どちらも「イベントが起きた場所だけ調べる」省エネ設計です。</p>
+  <h3>水：1リングずつ広がる「世代」方式</h3>
+  <pre class="mermaid">
+flowchart LR
+    E["ブロックを壊した/置いた"] --> Q["そのセルと隣6方向を<br/>キューに積む"]
+    Q --> S["0.2秒ごとに<br/>今の世代をまとめて評価"]
+    S --> N["新しく水になったセルの隣は<br/>「次の世代」へ繰り越し"]
+    N -.1ブロックの輪ずつ広がる.-> S
+  </pre>
+  <p>毎フレーム全部の水を調べるのではなく、変化が起きた場所の周りだけをキューに積み、0.2秒に1回「1世代」ずつ進めます。新しく水になったセルの影響は<b>わざと次の世代に持ち越す</b>ので、海底に穴を掘ると水が1ブロックずつ輪になって迫ってくる、あの Minecraft らしい見た目になります。</p>
+  <figure class="fig">
+  <svg viewBox="0 0 640 340" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="水が1世代ずつ広がるようすの俯瞰図" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><rect x="65" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="235" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="269" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="303" y="28" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="337" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="371" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="405" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="439" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="28" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="65" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="235" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="269" y="62" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="303" y="62" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="337" y="62" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="371" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="405" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="439" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="62" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="65" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="235" y="96" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="269" y="96" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="303" y="96" width="34" height="34" fill="#205693" stroke="#FFFFFF" stroke-width="1"/><rect x="337" y="96" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="371" y="96" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="405" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="439" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="96" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="65" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="130" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="235" y="130" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="269" y="130" width="34" height="34" fill="#205693" stroke="#FFFFFF" stroke-width="1"/><rect x="303" y="130" width="34" height="34" fill="#143E6E" stroke="#FFFFFF" stroke-width="1"/><rect x="337" y="130" width="34" height="34" fill="#205693" stroke="#FFFFFF" stroke-width="1"/><rect x="371" y="130" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="405" y="130" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="439" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="130" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="65" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="235" y="164" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="269" y="164" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="303" y="164" width="34" height="34" fill="#205693" stroke="#FFFFFF" stroke-width="1"/><rect x="337" y="164" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="371" y="164" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="405" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="439" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="164" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="65" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="235" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="269" y="198" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="303" y="198" width="34" height="34" fill="#3B7DC8" stroke="#FFFFFF" stroke-width="1"/><rect x="337" y="198" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="371" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="405" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="439" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="198" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="65" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="235" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="269" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="303" y="232" width="34" height="34" fill="#7FB2E8" stroke="#FFFFFF" stroke-width="1"/><rect x="337" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="371" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="405" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="439" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="232" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="65" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="99" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="133" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="167" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="201" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="235" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="269" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="303" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="337" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="371" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="405" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="439" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="473" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="507" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="541" y="266" width="34" height="34" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.5"/><rect x="48" y="308" width="15" height="15" fill="#143E6E" stroke="#C6D1BF" stroke-width="0.8"/><text x="69" y="320" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >はじまり</text><rect x="168" y="308" width="15" height="15" fill="#205693" stroke="#C6D1BF" stroke-width="0.8"/><text x="189" y="320" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >0.2秒後</text><rect x="288" y="308" width="15" height="15" fill="#3B7DC8" stroke="#C6D1BF" stroke-width="0.8"/><text x="309" y="320" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >0.4秒後</text><rect x="408" y="308" width="15" height="15" fill="#7FB2E8" stroke="#C6D1BF" stroke-width="0.8"/><text x="429" y="320" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >0.6秒後</text><rect x="528" y="308" width="15" height="15" fill="#F3F6EF" stroke="#C6D1BF" stroke-width="0.8"/><text x="549" y="320" fill="#5C6B5E" font-size="12" text-anchor="start" font-weight="400"  >まだ空気</text></svg>
+  <figcaption>新しく水になったセルの影響は「次の世代」に持ち越されるので、0.2秒ごとに1ブロックの輪だけ広がる。あの独特のじわじわ感の正体。</figcaption>
+  </figure>
+
+  <p>横方向への広がりは「海面より下」に限定されているのもポイントです。おかげで氾濫は必ず壁と海面で止まり、世界の果てまで水が暴走することがありません。</p>
+  <h3>砂と砂利：エンティティになって落ちる</h3>
+  <p>支えを失った砂は、ブロックのデータから一度取り除かれて「落下中の小さな箱メッシュ」に変身し、重力で落ちて、着地した瞬間にまたブロックへ戻ります。コードのコメントには、ボクセルゲームの落下物にありがちな3大バグへの対策が明記されています。</p>
+  <div class="grid3">
+    <div class="term"><b>すり抜け対策</b><p>1フレームで大きく落ちても、着地点は「下に向かって最初の固体」を走査して決めるので、地面を突き抜けません。</p></div>
+    <div class="term"><b>重なり対策</b><p>置く直前にもう一度そのマスが空きか確認。2粒が同時に着地しても同じマスを取り合いません。</p></div>
+    <div class="term"><b>柱くずれ対策</b><p>低い位置の粒から順に処理し、着地は即座にブロック化。砂の柱が1フレーム内で正しく積み上がります。</p></div>
+  </div>
+</section>
+
+<section id="mobs">
+  <p class="ch">第12章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#E39A8B"/><polygon points="3,29 50,56 50,112 3,85" fill="#C96A5A"/><polygon points="97,29 50,56 50,112 97,85" fill="#A84E3F"/></g></svg>動物たち</h2>
+  <p class="lede">担当：<code class="inline">mobs.ts</code>（491行、最大のファイル）。牛・豚・羊・にわとりが草原をのんびり歩き回ります。</p>
+  <p>驚くべきことに、動物の画像素材は1枚もありません。<b>胴体・頭・足という「箱」をコードで組み立て</b>、単色の頂点カラーで塗っています。足は股関節（ピボット）を軸に前後へ振れるので、ちゃんと歩いて見えます。まさに Minecraft の動物のレシピそのものです。</p>
+  <figure class="fig">
+  <svg viewBox="0 0 640 300" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="箱を組み合わせて作られた牛の図" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12"><line x1="80" y1="252" x2="560" y2="252" stroke="#C6D1BF" stroke-width="2"/><rect x="214" y="176" width="26" height="76" rx="3" fill="#6E4425"/><rect x="254" y="176" width="26" height="76" rx="3" fill="#6E4425"/><rect x="336" y="176" width="26" height="76" rx="3" fill="#6E4425"/><rect x="376" y="176" width="26" height="76" rx="3" fill="#6E4425"/><path d="M196,102 C176,110 172,140 178,164" fill="none" stroke="#6E4425" stroke-width="4" stroke-linecap="round"/><circle cx="178" cy="167" r="5" fill="#6E4425"/><rect x="196" y="92" width="210" height="92" rx="10" fill="#8A5A33" stroke="#6E4425" stroke-width="1.5"/><ellipse cx="245" cy="122" rx="22" ry="14" fill="#B98A5C" opacity="0.55"/><ellipse cx="345" cy="152" rx="26" ry="15" fill="#B98A5C" opacity="0.55"/><rect x="388" y="50" width="14" height="12" rx="3" fill="#6E4425"/><rect x="460" y="50" width="14" height="12" rx="3" fill="#6E4425"/><rect x="396" y="58" width="76" height="68" rx="8" fill="#B98A5C" stroke="#6E4425" stroke-width="1.5"/><rect x="466" y="96" width="24" height="30" rx="4" fill="#E8DCC9" stroke="#6E4425" stroke-width="1.2"/><circle cx="478" cy="106" r="2.2" fill="#6E4425"/><circle cx="478" cy="116" r="2.2" fill="#6E4425"/><circle cx="440" cy="84" r="4" fill="#263228"/><circle cx="227" cy="180" r="5.5" fill="#F6C767" stroke="#B57414" stroke-width="2"/><circle cx="267" cy="180" r="5.5" fill="#F6C767" stroke="#B57414" stroke-width="2"/><circle cx="349" cy="180" r="5.5" fill="#F6C767" stroke="#B57414" stroke-width="2"/><circle cx="389" cy="180" r="5.5" fill="#F6C767" stroke="#B57414" stroke-width="2"/><path d="M362,247 A72,72 0 0 1 416,247" fill="none" stroke="#B57414" stroke-width="1.6" stroke-dasharray="5 4"/><text x="300" y="36" fill="#263228" font-size="12" text-anchor="middle" font-weight="500"  >胴体：箱1個</text><line x1="300" y1="42" x2="300" y2="88" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="520" y="66" fill="#263228" font-size="12" text-anchor="start" font-weight="500"  >頭：箱1個</text><line x1="474" y1="70" x2="514" y2="66" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="520" y="184" fill="#B57414" font-size="12" text-anchor="start" font-weight="500"  >股関節ピボット</text><line x1="396" y1="180" x2="514" y2="180" stroke="#9AA79A" stroke-width="0.8" stroke-dasharray="3 3"/><text x="389" y="282" fill="#B57414" font-size="12" text-anchor="middle" font-weight="400"  >足は箱4個：ピボットを軸に前後スイング</text></svg>
+  <figcaption>牛＝箱の組み合わせ。模様も頂点の色だけで、画像素材はゼロ。豚・羊・にわとりも同じレシピ。</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:40%">仕様</th><th>値</th></tr>
+    <tr><td>種類</td><td>牛・豚・羊・にわとり の4種</td></tr>
+    <tr><td>同時に存在できる数</td><td>最大10体</td></tr>
+    <tr><td>現れる場所</td><td>プレイヤーから10〜44ブロック先の地面（約1.4秒ごとに抽選）</td></tr>
+    <tr><td>いなくなる距離</td><td>96ブロック以上離れると消える</td></tr>
+  </table>
+  <p>専用シェーダの <code class="inline">mob-material.ts</code> は地形と同じ太陽・環境光で動物を照らしますが、1つだけ違いがあります。動物は向きを変えて回転するので、<b>法線（面の向き）をワールド行列で変換してから</b>光を計算するのです。地形のチャンクは絶対に回転しないためこの計算を省略できる──「なぜ地形側にはこの処理がないのか」の答えまでコメントに書かれています。</p>
+</section>
+
+<section id="save">
+  <p class="ch">第13章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>セーブ＆ロード</h2>
+  <p class="lede">担当：<code class="inline">save-load.ts</code>（118行）。世界まるごとの保存なのに、ファイルは驚くほど小さくなります。</p>
+  <pre class="code"><span class="cm">// セーブデータの中身、これで全部！</span>
+interface SaveData {
+  v: 1;               <span class="cm">// フォーマットのバージョン</span>
+  seed: number;       <span class="cm">// 地形の「種」</span>
+  time: number;       <span class="cm">// 時刻（0〜1）</span>
+  player: PlayerState;<span class="cm">// 位置と視線の向き</span>
+  edits: number[];    <span class="cm">// [x, y, z, ブロックID, ...] 編集した場所だけ</span>
+}</pre>
+  <p>地形は seed から毎回同じものが計算できるので、保存する必要がありません。保存するのは<b>プレイヤーが手を加えた差分だけ</b>。1万個ブロックを積んでも、数値4個×1万＝わずか数百KBです。水の氾濫や動物の位置すら保存しません──読み込み後にルール通り再計算すれば同じ状態に戻るからです。</p>
+  <p>ファイル保存には新しい File System Access API を使い、対応していないブラウザ（Firefox や Safari）では自動的にダウンロード方式へ切り替わります。読み込み後は起動時と同じ <code class="inline">warmAround()</code> を呼び直すだけで、「水は満ちていてメッシュも完成している」という保証がそのまま再現されます。</p>
+</section>
+
+<section id="themes">
+  <p class="ch">第14章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#6DBB57"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>3つの設計テーマ</h2>
+  <p class="lede">4,669行を貫くのは、この3つの考え方です。自分のプロジェクトにもそのまま持ち帰れます。</p>
+  <div class="grid3">
+    <div class="term"><b>🌱 決定論</b><p>地形は seed から必ず同じに再現される。だからセーブは差分だけでよく、チャンクの継ぎ目は自然に一致し、捨てたチャンクも安心して作り直せる。1つの性質が3つの問題を同時に解いています。</p></div>
+    <div class="term"><b>🎨 アセットゼロ</b><p>テクスチャは CC0 素材を実行時に取得、動物は箱の組み立て、効果音は WebAudio で合成。リポジトリにバイナリを1つも増やさない潔さです。</p></div>
+    <div class="term"><b>⏱️ 予算駆動</b><p>メッシュ化・光・水・落下、すべてに「1フレーム◯回まで」。どんな大仕事も数フレームに分割され、体感のなめらかさが最優先されます。</p></div>
+  </div>
+  <div class="callout"><b>📝 コメントは「歴史書」</b><p>このコードのコメントには「以前は◯◯していたが、それが最大のボトルネックだったので△△に変えた」という改善の経緯が随所に残されています。完成形だけでなく試行錯誤ごと読めるのが、このサンプル最大の教材価値かもしれません。</p></div>
+</section>
+
+<section id="files">
+  <p class="ch">第15章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>ファイル一覧（全24ファイル）</h2>
+  <p class="lede">コードリーディングのおともに。行数は目安として。</p>
+  <table>
+    <tr><th>ファイル</th><th style="width:12%">行数</th><th>やくわり</th></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--stone-bg)">エントリポイント</td></tr>
+    <tr><td><code class="inline">minecraft.ts</code></td><td class="num">236</td><td>全部品の組み立てとフレームループ。ゲームのルールは持たない</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--grass-bg)">基盤層</td></tr>
+    <tr><td><code class="inline">constants.ts</code></td><td class="num">18</td><td>チャンク寸法（16×16×96）や海面の高さ（30）などの定数</td></tr>
+    <tr><td><code class="inline">noise.ts</code></td><td class="num">82</td><td>seed から同じ模様を再現する決定論ノイズ（fBm）</td></tr>
+    <tr><td><code class="inline">blocks.ts</code></td><td class="num">180</td><td>ブロック図鑑。23種類の見た目と性質をフラグで宣言</td></tr>
+    <tr><td><code class="inline">raycast.ts</code></td><td class="num">71</td><td>視線の先のブロックを探す格子レイキャスト</td></tr>
+    <tr><td><code class="inline">audio.ts</code></td><td class="num">125</td><td>壊す・置く・足音の効果音を WebAudio でその場で合成</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--grass-bg)">ワールド生成・照明層</td></tr>
+    <tr><td><code class="inline">worldgen.ts</code></td><td class="num">197</td><td>ノイズ→バイオーム→地形・洞窟・鉱石・木の生成</td></tr>
+    <tr><td><code class="inline">world.ts</code></td><td class="num">200</td><td>チャンクの保管庫。プレイヤーの編集を差分として記録</td></tr>
+    <tr><td><code class="inline">world-light.ts</code></td><td class="num">317</td><td>スカイライト＋ブロックライトの2チャネル光計算</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--stone-bg)">描画・マテリアル層</td></tr>
+    <tr><td><code class="inline">atlas.ts</code></td><td class="num">97</td><td>ブロックのPNGを1枚のテクスチャ台紙にまとめる</td></tr>
+    <tr><td><code class="inline">mesher.ts</code></td><td class="num">223</td><td>見える面だけ三角形化。頂点AOと対角線の工夫つき</td></tr>
+    <tr><td><code class="inline">voxel-material.ts</code></td><td class="num">234</td><td>WGSLシェーダ本体。不透明・切り抜き・半透明の3変種</td></tr>
+    <tr><td><code class="inline">chunk-renderer.ts</code></td><td class="num">255</td><td>チャンクの出し入れ係。予算管理と安全な後片付け</td></tr>
+    <tr><td><code class="inline">sky.ts</code></td><td class="num">121</td><td>空のドーム。地平線から天頂へのグラデーションと太陽</td></tr>
+    <tr><td><code class="inline">clouds.ts</code></td><td class="num">127</td><td>頭上を流れる雲。1枚の板にノイズで模様を描く</td></tr>
+    <tr><td><code class="inline">particles.ts</code></td><td class="num">132</td><td>ブロック破壊時に飛び散る小さな粒</td></tr>
+    <tr><td><code class="inline">highlight.ts</code></td><td class="num">78</td><td>ねらったブロックを囲う光る枠</td></tr>
+    <tr><td><code class="inline">mob-material.ts</code></td><td class="num">117</td><td>動物用シェーダ。頂点カラーをそのまま体の色に</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--water-bg)">機能・ゲームロジック層</td></tr>
+    <tr><td><code class="inline">controls.ts</code></td><td class="num">374</td><td>操作・歩行・ジャンプ・泳ぎ・ブロックとの衝突判定</td></tr>
+    <tr><td><code class="inline">water-sim.ts</code></td><td class="num">331</td><td>水の流れ。1リングずつ広がる世代方式</td></tr>
+    <tr><td><code class="inline">falling-blocks.ts</code></td><td class="num">260</td><td>砂・砂利の落下。すり抜け/重なり/柱くずれ対策つき</td></tr>
+    <tr><td><code class="inline">mobs.ts</code></td><td class="num">491</td><td>動物の組み立て・出現・お散歩AI・歩行アニメ</td></tr>
+    <tr><td><code class="inline">lighting.ts</code></td><td class="num">149</td><td>昼夜サイクルの司令塔。太陽・空・霧の色を一元管理</td></tr>
+    <tr><td><code class="inline">hud.ts</code></td><td class="num">136</td><td>照準・ホットバー・デバッグ表示。DOMだけで実装</td></tr>
+    <tr><td><code class="inline">save-load.ts</code></td><td class="num">118</td><td>世界のファイル保存と読み込み</td></tr>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="inner">
+    <p>ソースコード：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft.ts" rel="noopener">BabylonJS/Babylon-Lite — lab/lite/src/demos/minecraft.ts</a>（コンポーネント群は同階層の <code class="inline">minecraft/</code> フォルダ）</p>
+    <p>ブロックのテクスチャ：<a href="https://kenney.nl/assets/voxel-pack" rel="noopener">Kenney Voxel Pack</a>（CC0 / パブリックドメイン）。本ページの図は mermaid.js とインラインSVGで描画しています。</p>
+    <p>解説対象のソースコード（Babylon-Lite）は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/LICENSE" rel="noopener">Apache License 2.0</a> で公開されています。本ページで引用しているコード断片の著作権はそれぞれの著作者に帰属します。図の描画に使用している <a href="https://mermaid.js.org/" rel="noopener">mermaid.js</a>（MIT License）と Web フォント（SIL Open Font License）は CDN から参照しています。</p>
+    <p>Minecraft は Mojang Synergies AB / Microsoft の商標です。本ページおよび解説対象のデモは Mojang / Microsoft とは無関係の、独立した教育目的のコンテンツです。</p>
+  </div>
+</footer>
+
+<script type="module">
+try {
+  const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11.16.0/+esm');
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    securityLevel: 'loose',
+    fontFamily: "'Zen Kaku Gothic New', sans-serif",
+    flowchart: { htmlLabels: true, curve: 'linear', nodeSpacing: 34, rankSpacing: 42 },
+    themeVariables: {
+      fontSize: '13.5px',
+      primaryColor: '#EDF4EA',
+      primaryTextColor: '#263228',
+      primaryBorderColor: '#57A045',
+      lineColor: '#78848F',
+      secondaryColor: '#FBF3E2',
+      tertiaryColor: '#EAF2FA',
+      clusterBkg: '#F7FAF5',
+      clusterBorder: '#C6D1BF',
+      edgeLabelBackground: '#F3F6EF',
+      titleColor: '#263228'
+    }
+  });
+  await mermaid.run({ querySelector: 'pre.mermaid' });
+} catch (e) {
+  console.error('mermaid の読み込みに失敗しました（オフラインの可能性）:', e);
+}
+</script>
+</body>
+</html>
