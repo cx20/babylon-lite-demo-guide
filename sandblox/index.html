@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ブロックで作って歩けるサンドボックス — Babylon Lite sandblox デモ解説</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDF3FB;
+  --panel: #FFFFFF;
+  --ink: #1C2530;
+  --ink-soft: #59697A;
+  --line: #DBE6F1;
+  --line-strong: #C1D2E2;
+  --red: #C4281C; --red-deep: #93200F; --red-bg: #FBE9E6;
+  --orange: #DA8541; --orange-deep: #A85F26; --orange-bg: #FBEEE1;
+  --yellow: #E7A31C; --yellow-deep: #B07A0C; --yellow-bg: #FBF1D6;
+  --green: #4B974B; --green-deep: #326232; --green-bg: #E6F1E6;
+  --blue: #0D69AC; --blue-deep: #084B7D; --blue-bg: #E1EEF8;
+  --violet: #6B327C; --violet-deep: #4B2258; --violet-bg: #F0E7F4;
+  --stone: #8F9AA6; --stone-deep: #6A7580; --stone-bg: #EDF0F4;
+  --sky: #4E9AD6;
+  --stage: #17222E;
+  --font-display: 'DotGothic16', 'Zen Kaku Gothic New', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-code: 'M PLUS 1 Code', monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.95;
+}
+a { color: var(--blue-deep); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; border-radius: 4px; }
+::selection { background: #CFE6FB; }
+
+/* ── ヒーロー（晴れた空とブロック） ─────────── */
+.hero {
+  background:
+    radial-gradient(60% 55% at 82% 6%, rgba(255,246,214,.85), transparent 60%),
+    linear-gradient(180deg, #7FBEF3 0%, #A9D6F7 46%, #D9EEFB 78%, #EAF6E7 100%);
+  border-bottom: 3px solid #4B974B;
+  padding: 64px 24px 54px;
+  color: #18344B;
+}
+.hero-inner {
+  max-width: 1000px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center;
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 13px; letter-spacing: .22em;
+  color: #C46A12; margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(25px, 4.1vw, 39px);
+  line-height: 1.5; margin: 0 0 14px; letter-spacing: .01em;
+  color: #10293C;
+}
+.hero p.sub { margin: 0; max-width: 560px; color: #2C4A63; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 34px; margin-top: 26px; font-family: var(--font-code); }
+.stat b { display: block; font-size: 24px; line-height: 1.3; font-weight: 700; color: #0D2537; }
+.stat span { font-size: 12px; color: #3D5B74; letter-spacing: .06em; }
+.cubes { display: grid; grid-template-columns: repeat(2, 66px); gap: 20px 18px; }
+.cubes svg { filter: drop-shadow(0 8px 10px rgba(30,70,110,.28)); }
+.cubes svg:nth-child(1) { animation: bob 5s ease-in-out infinite; }
+.cubes svg:nth-child(2) { animation: bob 5s ease-in-out .8s infinite; }
+.cubes svg:nth-child(3) { animation: bob 5s ease-in-out 1.6s infinite; }
+.cubes svg:nth-child(4) { animation: bob 5s ease-in-out 2.4s infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+/* ── レイアウト ───────────────────────── */
+.layout {
+  max-width: 1060px; margin: 0 auto;
+  padding: 44px 24px 90px;
+  display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 46px;
+}
+nav.toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; }
+nav.toc .toc-title { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 10px 8px; }
+nav.toc a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 8px; border-radius: 6px;
+  color: var(--ink-soft); text-decoration: none; line-height: 1.5;
+}
+nav.toc a:hover { background: var(--panel); color: var(--ink); }
+.chip { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.18); }
+
+main { min-width: 0; }
+section { margin: 0 0 78px; scroll-margin-top: 26px; }
+.ch { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 6px; }
+h2 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: 25px; line-height: 1.4;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 10px;
+}
+h2 svg { flex: none; }
+h3 { font-size: 16.5px; margin: 34px 0 8px; }
+p { margin: 0 0 16px; }
+.lede { color: var(--ink-soft); margin-bottom: 22px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.term { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.term b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+.term p { font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.8; }
+
+.callout { border: 1px solid var(--line); border-left: 5px solid var(--yellow); background: var(--yellow-bg); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+.callout.blue { border-left-color: var(--blue); background: var(--blue-bg); }
+.callout.green { border-left-color: var(--green); background: var(--green-bg); }
+.callout.red { border-left-color: var(--red); background: var(--red-bg); }
+.callout.violet { border-left-color: var(--violet); background: var(--violet-bg); }
+.callout b { font-size: 14.5px; }
+.callout p { margin: 4px 0 0; font-size: 14px; }
+
+pre.mermaid {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 12px; margin: 20px 0;
+  display: flex; justify-content: center; overflow-x: auto;
+  font-family: var(--font-code); font-size: 13px; color: var(--ink-soft);
+}
+pre.code {
+  font-family: var(--font-code); font-size: 13px; line-height: 1.75;
+  background: var(--stage); color: #E7EEF5;
+  border-radius: 10px; padding: 18px 22px; overflow-x: auto; margin: 18px 0;
+}
+pre.code .cm { color: #7C93A8; }
+pre.code .kw { color: #E7A31C; }
+pre.code .st { color: #7FC9A0; }
+code.inline { font-family: var(--font-code); font-size: .88em; background: #E1E9F2; border-radius: 5px; padding: 1px 7px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 18px 0; }
+th { background: #E6EDF5; text-align: left; font-weight: 700; }
+th, td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.num { font-family: var(--font-code); text-align: right; white-space: nowrap; }
+tr.gh td { font-family: var(--font-display); font-size: 12.5px; letter-spacing: .12em; padding: 7px 14px; }
+kbd { font-family: var(--font-code); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line-strong); border-bottom-width: 3px; border-radius: 6px; padding: 1px 9px; white-space: nowrap; }
+
+footer { border-top: 3px solid var(--line-strong); margin-top: 30px; padding: 28px 24px 60px; }
+footer .inner { max-width: 1060px; margin: 0 auto; font-size: 13.5px; color: var(--ink-soft); }
+
+figure.fig { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 14px 12px; margin: 20px 0; }
+figure.fig figcaption { text-align: center; font-size: 13px; color: var(--ink-soft); margin-top: 10px; line-height: 1.75; padding: 0 12px; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 7px; margin: 16px 0; }
+.sw { width: 30px; height: 30px; border-radius: 6px; border: 1px solid rgba(0,0,0,.15); }
+
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; gap: 26px; padding-top: 20px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 0; }
+  nav.toc .toc-title { display: none; }
+  nav.toc .links { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  nav.toc a { white-space: nowrap; }
+  .hero-inner { grid-template-columns: 1fr; }
+  .cubes { grid-template-columns: repeat(4, 50px); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cubes svg { animation: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow">BABYLON LITE 公式デモを読む</p>
+      <h1>ブロックで作って、<br>その世界を歩きまわる。</h1>
+      <p class="sub">WebGPU 専用の軽量 3D エンジン「Babylon Lite」に付属する、サンドボックス「Sandblox」。積み木のようなブロックを置いて・伸ばして・塗って、そのまま四角い人形で歩いて跳んで確かめられる——全 35 ファイルのしくみを初心者向けにやさしく解説します。</p>
+      <div class="stats">
+        <div class="stat"><b>35</b><span>ファイル</span></div>
+        <div class="stat"><b>約5,300</b><span>行のコード</span></div>
+        <div class="stat"><b>5</b><span>ビルドツール</span></div>
+        <div class="stat"><b>14</b><span>色パレット</span></div>
+      </div>
+    </div>
+    <div class="cubes" aria-hidden="true">
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F2233" stroke-opacity=".26" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#E86A5E"/><polygon points="3,29 50,56 50,112 3,85" fill="#C4281C"/><polygon points="97,29 50,56 50,112 97,85" fill="#93200F"/></g><g fill="#F4A79E" opacity=".9"><ellipse cx="50" cy="18" rx="6" ry="3"/><ellipse cx="69" cy="29" rx="6" ry="3"/><ellipse cx="31" cy="29" rx="6" ry="3"/><ellipse cx="50" cy="40" rx="6" ry="3"/></g></svg>
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F2233" stroke-opacity=".26" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F7D860"/><polygon points="3,29 50,56 50,112 3,85" fill="#E7A31C"/><polygon points="97,29 50,56 50,112 97,85" fill="#B07A0C"/></g><g fill="#FCEBA6" opacity=".95"><ellipse cx="50" cy="18" rx="6" ry="3"/><ellipse cx="69" cy="29" rx="6" ry="3"/><ellipse cx="31" cy="29" rx="6" ry="3"/><ellipse cx="50" cy="40" rx="6" ry="3"/></g></svg>
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F2233" stroke-opacity=".26" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#4E9AD6"/><polygon points="3,29 50,56 50,112 3,85" fill="#0D69AC"/><polygon points="97,29 50,56 50,112 97,85" fill="#084B7D"/></g><g fill="#A8CFEE" opacity=".95"><ellipse cx="50" cy="18" rx="6" ry="3"/><ellipse cx="69" cy="29" rx="6" ry="3"/><ellipse cx="31" cy="29" rx="6" ry="3"/><ellipse cx="50" cy="40" rx="6" ry="3"/></g></svg>
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F2233" stroke-opacity=".26" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#78C078"/><polygon points="3,29 50,56 50,112 3,85" fill="#4B974B"/><polygon points="97,29 50,56 50,112 97,85" fill="#326232"/></g><g fill="#B4DEB4" opacity=".95"><ellipse cx="50" cy="18" rx="6" ry="3"/><ellipse cx="69" cy="29" rx="6" ry="3"/><ellipse cx="31" cy="29" rx="6" ry="3"/><ellipse cx="50" cy="40" rx="6" ry="3"/></g></svg>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">もくじ</p>
+  <div class="links">
+    <a href="#intro"><span class="chip" style="background:var(--red)"></span>このデモとは</a>
+    <a href="#play"><span class="chip" style="background:var(--yellow)"></span>あそびかた</a>
+    <a href="#glossary"><span class="chip" style="background:var(--stone)"></span>用語ミニ辞典</a>
+    <a href="#arch"><span class="chip" style="background:var(--stage)"></span>全体の地図</a>
+    <a href="#boot"><span class="chip" style="background:var(--yellow)"></span>起動の流れ</a>
+    <a href="#part"><span class="chip" style="background:var(--green)"></span>パーツという単位</a>
+    <a href="#instancing"><span class="chip" style="background:var(--blue)"></span>一気に描くしくみ</a>
+    <a href="#studs"><span class="chip" style="background:var(--orange)"></span>スタッドの質感</a>
+    <a href="#lighting"><span class="chip" style="background:var(--sky)"></span>光と空</a>
+    <a href="#character"><span class="chip" style="background:var(--yellow)"></span>ブロック人間</a>
+    <a href="#controllers"><span class="chip" style="background:var(--green)"></span>歩く・跳ぶ・見まわす</a>
+    <a href="#animation"><span class="chip" style="background:var(--violet)"></span>手足のアニメ</a>
+    <a href="#tools"><span class="chip" style="background:var(--orange)"></span>5つのツール</a>
+    <a href="#grab"><span class="chip" style="background:var(--blue)"></span>マウスで掴むしくみ</a>
+    <a href="#sound"><span class="chip" style="background:var(--violet)"></span>音の合成</a>
+    <a href="#save"><span class="chip" style="background:var(--green)"></span>保存と持ち運び</a>
+    <a href="#themes"><span class="chip" style="background:var(--red)"></span>設計テーマ</a>
+    <a href="#files"><span class="chip" style="background:var(--stage)"></span>ファイル一覧</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="intro">
+  <p class="ch">第1章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#E86A5E"/><polygon points="3,29 50,56 50,112 3,85" fill="#C4281C"/><polygon points="97,29 50,56 50,112 97,85" fill="#93200F"/></g><g fill="#F4A79E"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>このデモとは</h2>
+  <p class="lede">「ブロックを置いて世界を作って、その中を自分で歩けたら楽しいよね？」を、そのまま動くコードにしたサンプルです。</p>
+  <p>このデモは、Babylon.js ファミリーの WebGPU 専用ランタイム <b>Babylon Lite</b> の公式リポジトリに含まれる、<b>Sandblox</b>（サンドブロックス）です。名前のとおり「サンドボックス（自由に遊べる砂場）」＋「ブロック」。緑の大きな土台（ベースプレート）の上に、スタッド（丸い突起）付きのブロックを置き、動かし・伸ばし・複製し・塗り・壊し——そして四角い人形になって、作ったばかりの世界を歩いて跳んで確かめられます。作った世界はブラウザに自動保存され、ファイルとして書き出し／読み込みもできます。</p>
+  <p>プログラムとしての見どころは、次の3点です。</p>
+  <div class="grid3">
+    <div class="term"><b>🧱 全部が「パーツ」</b><p>土台もブロックも、正体はすべて同じ <code class="inline">Part</code>。位置・大きさ・色・回転を持つだけの素直なデータで、描画も当たり判定も1本の道に集約されています。</p></div>
+    <div class="term"><b>🛠️ 作って即・遊べる</b><p>5つの編集ツール（移動・複製・リサイズ・削除・ペイント）と、歩ける四角い人形。作る側と遊ぶ側が1つの画面に同居する“ミニ Roblox”。</p></div>
+    <div class="term"><b>⚡ 一気に描くしくみ</b><p>何百個のブロックも1個ずつ描かず、GPU へまとめて転送。スタッドの突起も、効果音も、すべてコードで<b>その場生成</b>——外部アセットは最小限です。</p></div>
+  </div>
+</section>
+
+<section id="play">
+  <p class="ch">第2章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F7D860"/><polygon points="3,29 50,56 50,112 3,85" fill="#E7A31C"/><polygon points="97,29 50,56 50,112 97,85" fill="#B07A0C"/></g><g fill="#FCEBA6"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>あそびかた</h2>
+  <p class="lede">コードを読む前に、まず触ってみるのがいちばんの近道です。「歩く操作」と「作る操作」の2系統があります。</p>
+  <div class="callout"><b>🎮 ブラウザで遊ぶ</b><p><a href="https://babylonjs.com/lite-demos/demo-sandblox.html" target="_blank" rel="noopener">babylonjs.com のライブデモを開く →</a>（WebGPU 対応ブラウザが必要です）</p></div>
+  <h3>歩く（キャラクター操作）</h3>
+  <table>
+    <tr><th style="width:42%">操作</th><th>すること</th></tr>
+    <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> / <kbd>↑</kbd> <kbd>↓</kbd></td><td>前後左右に移動（カメラの向きが「前」・速さ16 studs/秒）</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>ジャンプ</td></tr>
+    <tr><td>右ドラッグ</td><td>カメラを旋回（三人称ぐるり視点）</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>カメラを左右に旋回（キーでも回せる）</td></tr>
+    <tr><td>マウスホイール</td><td>ズームイン／アウト（半径 1〜50 studs）</td></tr>
+  </table>
+  <h3>作る（ビルドツール）</h3>
+  <table>
+    <tr><th style="width:42%">操作</th><th>すること</th></tr>
+    <tr><td><kbd>1</kbd> 移動 / <kbd>2</kbd> 複製 / <kbd>3</kbd> リサイズ</td><td>下部ツールバーのツールを選ぶ（<kbd>4</kbd> 削除 / <kbd>5</kbd> ペイント）</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>ツールを解除（何も選んでいない状態へ）</td></tr>
+    <tr><td>ドラッグ中の <kbd>R</kbd> / <kbd>T</kbd></td><td>掴んだブロックを90°回転（R＝ヨー／T＝ピッチ）</td></tr>
+    <tr><td>Export / Import map</td><td>作った世界を <code class="inline">map.json</code> に書き出し／読み込み</td></tr>
+  </table>
+  <div class="callout blue"><b>💡 グリッドは1スタッド刻み</b><p>ブロックは常に1スタッド単位でピタッと吸着します。しかも「偶数サイズなら整数の中心、奇数サイズなら半整数の中心」に合わせるので、幅の違うブロックでもズレずに積めます。土台の外（±256 studs）には出られません。</p></div>
+</section>
+
+<section id="glossary">
+  <p class="ch">第3章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#C7C6C9"/><polygon points="3,29 50,56 50,112 3,85" fill="#8F9AA6"/><polygon points="97,29 50,56 50,112 97,85" fill="#6A7580"/></g><g fill="#E2E5EA"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>用語ミニ辞典</h2>
+  <p class="lede">この先の章で出てくることばを先にまとめて紹介します。分からなくなったらここに戻ってきてください。</p>
+  <div class="grid2">
+    <div class="term"><b>スタッド（stud）</b><p>ブロック上面に並ぶ丸い突起のこと。LEGO やあの積み木でおなじみ。長さの単位としても使われ、1スタッド＝ブロック1マス分です。</p></div>
+    <div class="term"><b>パーツ（Part）</b><p>この世界の最小単位オブジェクト。大きさ・位置・回転・色・ロック状態を持つだけの素直なデータ。土台もブロックも中身は同じ Part です。</p></div>
+    <div class="term"><b>ベースプレート</b><p>足場になる緑の巨大な板。じつは 512×16×512 のロックされた Part 1枚で、上面がちょうど高さ0に来ています。</p></div>
+    <div class="term"><b>thin instancing</b><p>同じ形のメッシュを、位置と色だけ変えて何百個も一括描画する GPU 機能。1個ずつ描くよりずっと高速です。</p></div>
+    <div class="term"><b>AABB（軸並行境界ボックス）</b><p>傾いていない直方体の当たり判定。パーツの選択・衝突・積み重ね判定の土台になります。</p></div>
+    <div class="term"><b>レイキャスト</b><p>マウスの位置から3Dの光線を飛ばし、最初に当たったパーツと面を求める処理。クリック＝レイキャストです。</p></div>
+    <div class="term"><b>reverse-Z</b><p>奥行きの精度を上げるため、深度を反転させて扱う方式（近＝1・遠＝0）。この光線計算もそれ前提で書かれています。</p></div>
+    <div class="term"><b>クォータニオン</b><p>回転を4つの数で表す方法。このデモの回転は90°刻みだけなので、面の向きが必ずワールドの軸に一致します。</p></div>
+    <div class="term"><b>マテリアルプラグイン</b><p>既存の標準シェーダに自前のコードを差し込むしくみ。スタッドの突起は、このプラグインで描いています。</p></div>
+    <div class="term"><b>SDF（符号付き距離関数）</b><p>「その点は形の内側？外側？どれだけ離れてる？」を返す関数。丸角スタッドの断面を、この距離で作ります。</p></div>
+    <div class="term"><b>ノーマルマップ</b><p>表面の細かな凹凸を、法線（面の向き）情報として持つテクスチャ。平らな面でもスタッドの陰影が立ちます。</p></div>
+    <div class="term"><b>キネマティック</b><p>物理エンジンを使わず、重力・ジャンプ・着地を自前の計算で処理する方式。軽くて予測しやすいのが利点。</p></div>
+    <div class="term"><b>ハンドル／アドーンメント</b><p>選択したパーツに付く操作用の目印。リサイズ用の6個のボールや、選択枠の線がこれです。</p></div>
+    <div class="term"><b>WebAudio 合成</b><p>音声ファイルを一切使わず、コードから波形を合成して効果音を鳴らす方法。このデモの音は全部これです。</p></div>
+  </div>
+</section>
+
+<section id="arch">
+  <p class="ch">第4章</p>
+  <h2><svg viewBox="0 0 100 100" width="26" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="8" fill="#17222E" stroke="#0F2233" stroke-width="4"/><g stroke="#4E9AD6" stroke-width="5" stroke-linecap="round"><line x1="26" y1="34" x2="74" y2="34"/><line x1="26" y1="52" x2="74" y2="52"/><line x1="26" y1="70" x2="58" y2="70"/></g></svg>全体の地図</h2>
+  <p class="lede">エントリの <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox.ts" target="_blank" rel="noopener"><code class="inline">sandblox.ts</code></a> は、エンジン・空・光を用意し、「ワールド」「キャラクター」「ツール群」の3つを組み立てて描画を回します。</p>
+  <pre class="mermaid">
+flowchart TD
+    ENTRY["sandblox.ts<br/>エンジン・シーン・空・光"]
+    subgraph WORLD["ワールド（作られる側）"]
+        direction LR
+        WS["workspace<br/>全パーツの台帳"]
+        PART["part<br/>1個のブロック"]
+        REND["part-renderer<br/>一括描画"]
+        STUD["stud-*<br/>突起の質感"]
+    end
+    subgraph PLAYER["キャラクター（遊ぶ側）"]
+        direction LR
+        CHAR["character<br/>四角い人形"]
+        PC["player-controller<br/>歩く/跳ぶ/カメラ"]
+    end
+    subgraph BUILD["ツール（作る道具）"]
+        direction LR
+        TB["toolbar<br/>5ボタン"]
+        TM["tool-manager<br/>1つだけ有効"]
+        TOOLS["move/clone/resize<br/>paint/delete"]
+    end
+    ENTRY --> WORLD
+    ENTRY --> PLAYER
+    ENTRY --> BUILD
+    PART --> REND
+    REND --> STUD
+    TOOLS --> WS
+    PC --> WS
+  </pre>
+  <p>矢印は「上が下を利用する」向きです。中心にいるのは <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/workspace.ts" target="_blank" rel="noopener"><code class="inline">workspace.ts</code></a>——世界にある全パーツの<b>唯一の台帳</b>です。ツールは「クリックした先に何があるか」をここに問い合わせ、キャラクターは「どこにぶつかるか」をここから受け取ります。作る側と遊ぶ側が、この1枚の台帳を通してつながっています。</p>
+  <div class="callout green"><b>🔍 読みはじめるなら</b><p>おすすめは、①<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/part.ts" target="_blank" rel="noopener"><code class="inline">part.ts</code></a>（1個のブロックとは）→ ②<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/workspace.ts" target="_blank" rel="noopener"><code class="inline">workspace.ts</code></a>（台帳）→ ③<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/part-renderer.ts" target="_blank" rel="noopener"><code class="inline">part-renderer.ts</code></a>（描画）→ ④ツール群。小さな部品から読むと、大きな仕組みが「知ってる部品の組み立て」に見えてきます。</p></div>
+</section>
+
+<section id="boot">
+  <p class="ch">第5章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F7D860"/><polygon points="3,29 50,56 50,112 3,85" fill="#E7A31C"/><polygon points="97,29 50,56 50,112 97,85" fill="#B07A0C"/></g><g fill="#FCEBA6"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>起動の流れ</h2>
+  <p class="lede">ページを開いてから世界が現れるまで、<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox.ts" target="_blank" rel="noopener"><code class="inline">sandblox.ts</code></a> は次の順で準備を進めます。</p>
+  <pre class="mermaid">
+flowchart TD
+    A["① エンジンとシーンを用意<br/>空色 (0.58, 0.79, 0.98)"] --> B["② 光と影・空のスカイボックス"]
+    B --> C["③ 台帳(workspace)と描画器(part-renderer)"]
+    C --> D["④ ベースプレート 512×16×512 を1枚置く"]
+    D --> E["⑤ 保存データを復元<br/>無ければ default-map.json を取得"]
+    E --> F["⑥ 四角い人形を組み立て・影に登録"]
+    F --> G["⑦ ツール群とツールバーを配線"]
+    G --> H["⑧ PlayerController を起動しループ開始"]
+  </pre>
+  <p>特徴的なのは④と⑤です。足場の緑の板は特別扱いではなく、<b>「ロックした大きな Part を1枚置くだけ」</b>。そして⑤で、前回ブラウザに保存した世界があればそれを復元し、なければリポジトリ同梱の <code class="inline">default-map.json</code> をネット越しに取ってきて並べます。URL に <code class="inline">?fresh=1</code> を付けて開くと保存を消して初期マップから始められます。</p>
+  <div class="callout blue"><b>🧩 カメラは「あとから」作られる</b><p><code class="inline">sandblox.ts</code> 本体にカメラを作るコードは出てきません。三人称カメラは <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/camera-controller.ts" target="_blank" rel="noopener"><code class="inline">camera-controller.ts</code></a> の中で、キャラクターと一緒に生まれます。「シーンの準備」と「遊ぶ人の視点」を分けておく設計です。</p></div>
+</section>
+
+<section id="part">
+  <p class="ch">第6章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#78C078"/><polygon points="3,29 50,56 50,112 3,85" fill="#4B974B"/><polygon points="97,29 50,56 50,112 97,85" fill="#326232"/></g><g fill="#B4DEB4"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>パーツという単位</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/part.ts" target="_blank" rel="noopener"><code class="inline">part.ts</code></a>。この世界にあるものは、キャラクターと空をのぞいて<b>全部これ</b>です。</p>
+  <p><code class="inline">Part</code> が持つのは、大きさ <code class="inline">size</code>・位置 <code class="inline">position</code>・回転 <code class="inline">rotation</code>（クォータニオン）・色 <code class="inline">color</code>・ロック状態 <code class="inline">locked</code> だけ。あらゆる変更は必ず <code class="inline">setSize</code> / <code class="inline">setPosition</code> / <code class="inline">rotate90</code> / <code class="inline">setColor</code> といった専用の入口を通り、その中で「描画器に新しい姿を書き込む」「変更を通知する」の2つを確実に行います。データと表示がズレない、いちばん基本の作法です。</p>
+  <table>
+    <tr><th>性質</th><th>値・ふるまい</th></tr>
+    <tr><td>デフォルトの大きさ</td><td><code class="inline">[2, 1, 1]</code>（横長ブロック1個）</td></tr>
+    <tr><td>デフォルトの色</td><td><code class="inline">[0.16, 0.5, 0.73]</code>（青）</td></tr>
+    <tr><td>最小サイズ</td><td>各辺 <code class="inline">MIN_SIZE = 1</code> スタッド未満にはならない</td></tr>
+    <tr><td>回転</td><td><code class="inline">rotate90("y")</code>＝ヨー、<code class="inline">"x")</code>＝ピッチ。90°刻みのみ</td></tr>
+    <tr><td>ベースプレート</td><td><code class="inline">512×16×512</code>、上面が高さ0、<code class="inline">locked: true</code></td></tr>
+    <tr><td>当たり判定</td><td><code class="inline">getAABB()</code> で世界座標の直方体を返す（90°刻みなので厳密）</td></tr>
+  </table>
+  <p>生まれるとき Part は、描画器に「1枠ください」と <code class="inline">allocInstance</code> で場所を確保し、<code class="inline">workspace</code>（台帳）に自分を登録します。消えるとき（<code class="inline">destroy</code>）は逆に、枠を返し台帳から抜けます。<b>この登録・解除の対称性</b>が、何百個のブロックを破綻なく出し入れできる秘密です。</p>
+  <div class="callout"><b>🔒 ロックの意味</b><p>ベースプレートは <code class="inline">locked: true</code>。ロックされたパーツはクリックの対象にならず（＝ツールで動かせない）、セーブにも含まれません。でも当たり判定には残るので、その上をちゃんと歩けます。「触れないけど、そこにある」を1つのフラグで表しています。</p></div>
+</section>
+
+<section id="instancing">
+  <p class="ch">第7章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#4E9AD6"/><polygon points="3,29 50,56 50,112 3,85" fill="#0D69AC"/><polygon points="97,29 50,56 50,112 97,85" fill="#084B7D"/></g><g fill="#A8CFEE"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>一気に描くしくみ</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/part-renderer.ts" target="_blank" rel="noopener"><code class="inline">part-renderer.ts</code></a>（334行）。何百個のブロックを、たった数回の描画命令で出す心臓部です。</p>
+  <p>コツは <b>thin instancing</b>。単位立方体のメッシュを1つだけ用意し、それを「位置・回転・大きさ」の行列と「色」を差し替えながら大量に複製します。ブロックが100個あっても、送るのは100個ぶんの行列と色の配列だけ。描画命令の数はブロック数に左右されません。</p>
+  <p>このデモは用途別に<b>3つのプール</b>を分けています。混ぜないことで影の計算が破綻しないよう工夫しています。</p>
+  <table>
+    <tr><th>プール</th><th>用途</th></tr>
+    <tr><td><code class="inline">caster</code></td><td>ふつうのブロック。影を落とし、影を受ける</td></tr>
+    <tr><td><code class="inline">receiver</code></td><td>ベースプレート専用。影を受けるだけ（巨大なので影の範囲計算から隔離）</td></tr>
+    <tr><td><code class="inline">wedge</code></td><td>斜面ブロック（スタッドなし）。専用メッシュ</td></tr>
+  </table>
+  <h3>アルファ値に「面の向き」を隠す</h3>
+  <p>各インスタンスは <b>16個の行列＋RGBAの色</b>を持ちます。ここで面白いのが、色の<b>アルファ（A）は透明度ではなく「どの面が上か」を表す</b>点。<code class="inline">(面番号 + 0.5) / 8</code> という式でこっそり埋め込み、シェーダ側がこれを読んでスタッドを描く面を決めます（番号6＝スタッドなし）。使っていないチャンネルに情報を相乗りさせる、賢いパッキングです。</p>
+  <pre class="code"><span class="cm">// 上向きの面を、色のアルファに符号化して忍ばせる</span>
+<span class="cm">// 面番号 0:+X 1:-X 2:+Y 3:-Y 4:+Z 5:-Z、6以上=スタッドなし</span>
+alpha = (faceIndex + <span class="st">0.5</span>) / <span class="st">8</span>;</pre>
+  <div class="callout violet"><b>⚙️ 動かすと消えないための一手</b><p>ソースには重要な注意書きがあります。標準マテリアルの thin instance は、そのままだと「一度描いた内容」がキャッシュされ、実行中に動かした・伸ばした・複製したブロックが<b>更新されないまま</b>になります。そこで <code class="inline">enableThinInstanceGpuCulling</code> を呼び、描画をキャッシュ束から外して毎フレーム転送させています。これが無いと、編集しても画面が変わりません。</p></div>
+  <p>もう一つの地味な要は<b>枠の使い回し</b>。ブロックを消すと、内部では「最後の枠を空いた場所へ詰める」入れ替え方式で穴を埋めます。このとき色の配列も一緒に詰め替え、外から見える番号（ハンドル）は変わらないよう対応表を更新——だから途中でどれを消しても、他のブロックの参照が壊れません。</p>
+</section>
+
+<section id="studs">
+  <p class="ch">第8章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#EEA968"/><polygon points="3,29 50,56 50,112 3,85" fill="#DA8541"/><polygon points="97,29 50,56 50,112 97,85" fill="#A85F26"/></g><g fill="#F6D3AF"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>スタッドの質感</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/stud-texture.ts" target="_blank" rel="noopener"><code class="inline">stud-texture.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/stud-material-plugin.ts" target="_blank" rel="noopener"><code class="inline">stud-material-plugin.ts</code></a>。あの「丸い突起」を、テクスチャ1枚とシェーダで作ります。</p>
+  <p>まず <code class="inline">stud-texture.ts</code> が、突起1個ぶんの小さなタイル（<code class="inline">64×64</code> ピクセル）を<b>コードで描き起こします</b>。丸角四角の SDF（符号付き距離関数）から「高さの地図」を作り、そこから2枚を生成——平らな面よりわずかに明るいグレーの<b>色テクスチャ</b>（下地の明るさ 0.82／突起の頂上 1.0）と、傾きを表す<b>ノーマルマップ</b>。継ぎ目なく敷き詰められるよう、端は反対側を参照して計算しています。</p>
+  <table>
+    <tr><th>定数</th><th>意味</th></tr>
+    <tr><td><code class="inline">TILE_PX = 64</code></td><td>スタッド1個のタイル解像度</td></tr>
+    <tr><td><code class="inline">STUD_HALF_SIZE = 0.25</code></td><td>突起の半径（タイル比。実幅は 0.5）</td></tr>
+    <tr><td><code class="inline">CORNER_RADIUS = 0.12</code></td><td>角の丸み</td></tr>
+    <tr><td><code class="inline">BEVEL_PX = 2</code></td><td>ふちの立ち上がりの鋭さ</td></tr>
+    <tr><td><code class="inline">NORMAL_STRENGTH = 8.0</code></td><td>ノーマルマップの陰影の強さ</td></tr>
+  </table>
+  <p>次に <code class="inline">stud-material-plugin.ts</code> が、共有マテリアルの標準シェーダに WGSL の断片を差し込みます（マテリアルプラグイン）。第7章でアルファに隠した「上向きの面番号」をここで復号し、その面が本当に上を向いているか（法線との内積が <code class="inline">0.995</code> 以上か）を確かめて、スタッドの色と法線を合成。<b>90°刻み回転なので、面が必ずワールドの軸に一致する</b>——だから面ごとの向きのテーブルが正確に効きます。ブロックを倒せばスタッドも一緒に横を向きます。</p>
+  <div class="callout"><b>🧠 なぜ上面だけ？</b><p>実物のブロックも突起は上面だけ。全面に描くと積んだとき突起がめり込んで見えます。「その部品のローカルな“上”」1面にだけ描くことで、回転しても積んでも自然に見えるわけです。</p></div>
+</section>
+
+<section id="lighting">
+  <p class="ch">第9章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#7FC0F7"/><polygon points="3,29 50,56 50,112 3,85" fill="#4E9AD6"/><polygon points="97,29 50,56 50,112 97,85" fill="#2E6FA8"/></g><g fill="#BFE0FB"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>光と空</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/lighting.ts" target="_blank" rel="noopener"><code class="inline">lighting.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/world.ts" target="_blank" rel="noopener"><code class="inline">world.ts</code></a>。晴れた屋外の空気感を、2灯＋空でつくります。</p>
+  <table>
+    <tr><th>要素</th><th>設定のねらい</th></tr>
+    <tr><td>環境光（ヘミスフェリック）</td><td>上向き、強さ <code class="inline">0.8</code>。空の色 <code class="inline">[1.0, 0.9, 0.75]</code>・地の色 <code class="inline">[0.3, 0.35, 0.45]</code> で全体を沈ませない</td></tr>
+    <tr><td>太陽（ディレクショナル）</td><td>方向 <code class="inline">[0.25, -1, 0.9]</code>・強さ <code class="inline">0.5</code>。斜め上から差し、影を落とす</td></tr>
+    <tr><td>影（PCF）</td><td>解像度 <code class="inline">2048</code>、<code class="inline">bias 0.0012</code>、範囲 <code class="inline">0.1〜150</code>。毎フレーム更新</td></tr>
+    <tr><td>空（スカイボックス）</td><td><code class="inline">TropicalSunnyDay</code> の6面画像、サイズ <code class="inline">10000</code></td></tr>
+    <tr><td>背景クリア色</td><td><code class="inline">(0.58, 0.79, 0.98)</code> の水色。空とスカイボックスがなじむ</td></tr>
+  </table>
+  <p>影は動く世界に合わせて<b>毎フレーム描き直す</b>設定です（<code class="inline">forceRefreshEveryFrame</code>）。誰がその影を落とすかは <code class="inline">setShadowCasters</code> で登録——キャラクターの全メッシュと、ブロック用・斜面用の描画メッシュが対象です。巨大なベースプレートを影の“落とす側”から外しているのは、それを入れると影の範囲が広がりすぎて解像度が無駄になるからです。</p>
+</section>
+
+<section id="character">
+  <p class="ch">第10章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F7D860"/><polygon points="3,29 50,56 50,112 3,85" fill="#E7A31C"/><polygon points="97,29 50,56 50,112 97,85" fill="#B07A0C"/></g><g fill="#FCEBA6"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>ブロック人間</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/character.ts" target="_blank" rel="noopener"><code class="inline">character.ts</code></a>（647行・最大のファイル）。あの四角い人形を、角を丸めた箱と円柱だけで組み立てます。</p>
+  <p>このファイルは<b>「形を作るだけ」</b>で、動きは一切持ちません。土台（<code class="inline">root</code>）は足元＝高さ0にあり、そこから各パーツを積み上げます。腕と脚は「ピボット（回転の支点）」からぶら下げ、少し下にずらして取り付けることで、肩・股から振り出せるようにしています。</p>
+  <table>
+    <tr><th>パーツ</th><th>寸法・位置</th></tr>
+    <tr><td>胴（シャツ）</td><td>箱 <code class="inline">2×2×1</code>、位置 <code class="inline">(0, 3, 0)</code></td></tr>
+    <tr><td>腕 ×2</td><td>箱 <code class="inline">1×2×1</code>、ピボット <code class="inline">(±1.5, 3.8, 0)</code></td></tr>
+    <tr><td>脚 ×2</td><td>箱 <code class="inline">1×2×1</code>、ピボット <code class="inline">(±0.5, 1.8, 0)</code></td></tr>
+    <tr><td>頭</td><td>丸めた円柱、位置 <code class="inline">(0, 4.5, 0)</code>。顔テクスチャ付き</td></tr>
+    <tr><td>肌の色</td><td><code class="inline">[0.96, 0.8, 0.19]</code>（“ヌーブ”イエロー）</td></tr>
+  </table>
+  <p>顔は <code class="inline">128×128</code> のキャンバスにコードで描いた<b>笑顔テクスチャ</b>。白を透明に抜き、黒で目（楕円）と口（二次曲線のスマイル）を描き、頭の正面に貼ります。すべての箱・円柱は角を <code class="inline">bevelRadius 0.05</code> でわずかに丸め、輪郭にやわらかい光の線を出しています。</p>
+</section>
+
+<section id="controllers">
+  <p class="ch">第11章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#78C078"/><polygon points="3,29 50,56 50,112 3,85" fill="#4B974B"/><polygon points="97,29 50,56 50,112 97,85" fill="#326232"/></g><g fill="#B4DEB4"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>歩く・跳ぶ・見まわす</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/player-controller.ts" target="_blank" rel="noopener"><code class="inline">player-controller.ts</code></a> が、入力・物理・移動・アニメ・カメラの5つの部品をまとめ、毎フレームの<b>処理順</b>を仕切ります。</p>
+  <pre class="mermaid">
+flowchart LR
+    IN["input<br/>キー/マウス"] --> PH["physics<br/>重力/ジャンプ/着地"]
+    PH --> MV["movement<br/>水平移動/衝突/段差"]
+    MV --> FS["footstep<br/>足音"]
+    FS --> AN["animation<br/>手足を動かす"]
+    AN --> CAM["camera<br/>視点を更新"]
+  </pre>
+  <p>この順番には意味があります。先に上下（重力・着地）を解決してから左右（水平移動・衝突）を処理し、カメラは<b>最後に</b>確定した位置を追う。1フレームの経過時間は最大 <code class="inline">0.05</code> 秒に頭打ちして、重い瞬間でもすり抜けないようにしています。</p>
+  <div class="grid3">
+    <div class="term"><b>🏃 移動 <span style="color:var(--green-deep)">movement</span></b><p>WASD をカメラ基準の向きに変換して <code class="inline">16</code> studs/秒で移動。向きは <code class="inline">13</code> rad/秒でなめらかに追従。高さ <code class="inline">1.2</code> までの段差は自動でよじ登り、それ以上は壁として滑ります。</p></div>
+    <div class="term"><b>🦘 物理 <span style="color:var(--green-deep)">physics</span></b><p>物理エンジンなしの手計算。重力 <code class="inline">196</code>、ジャンプ初速 <code class="inline">50</code>。足元で最も高いブロック上面に吸着。高さ <code class="inline">-80</code> を割ると <code class="inline">(-20, 0, -20)</code> へ復活。</p></div>
+    <div class="term"><b>🎥 カメラ <span style="color:var(--green-deep)">camera</span></b><p>三人称のアークローテート。半径 <code class="inline">1〜50</code>、頭の高さ（+3）を注視。地面にめり込みそうになると自動でズームインし、離れると戻ります。</p></div>
+  </div>
+  <p>キャラクターの当たり判定は、幅 <code class="inline">0.5×0.5</code>・高さ <code class="inline">5</code> の箱。ブロックの AABB と重なったら、はみ出しの小さい軸へ押し戻す「スライド衝突」で、壁に沿って自然に滑ります。</p>
+</section>
+
+<section id="animation">
+  <p class="ch">第12章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#9B63AC"/><polygon points="3,29 50,56 50,112 3,85" fill="#6B327C"/><polygon points="97,29 50,56 50,112 97,85" fill="#4B2258"/></g><g fill="#CDAAD8"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>手足のアニメ</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/animation-controller.ts" target="_blank" rel="noopener"><code class="inline">animation-controller.ts</code></a>。3つの動きを<b>コードだけ</b>で作り、なめらかに切り替えます。</p>
+  <p>アニメの正体は、腕・脚のピボットを X 軸まわりに回すだけの<b>手作りクリップ</b>。外部のモーションデータは使いません。状態はキーを押した／離した・跳んだ・着地したといった<b>イベントで切り替わり</b>、切り替わるたびに <code class="inline">150ms</code> かけて前の動きへブレンド（クロスフェード）します。</p>
+  <table>
+    <tr><th>状態</th><th>中身</th></tr>
+    <tr><td><code class="inline">rest</code>（待機）</td><td>60フレームのループ。腕を <code class="inline">±0.044</code> rad でごくわずかに揺らす</td></tr>
+    <tr><td><code class="inline">walk</code>（歩き）</td><td>20フレームのループ。腕・脚を <code class="inline">±π/5</code> で交互に振る（腕は同じ側の脚と逆位相）</td></tr>
+    <tr><td><code class="inline">jump</code>（跳躍）</td><td>ループなし。両腕を <code class="inline">-π×0.98</code> まで一気に上げる</td></tr>
+  </table>
+  <p>「歩き→待機」「待機/歩き→跳躍」「跳躍→着地」の遷移は、キーの状態を毎フレーム調べるのではなく、物理側や入力側が投げる<b>イベントに反応</b>する形。ポーリングではなくイベント駆動なので、状態のとり違いが起きにくい素直な作りです。</p>
+</section>
+
+<section id="tools">
+  <p class="ch">第13章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#EEA968"/><polygon points="3,29 50,56 50,112 3,85" fill="#DA8541"/><polygon points="97,29 50,56 50,112 97,85" fill="#A85F26"/></g><g fill="#F6D3AF"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>5つのツール</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/toolbar.ts" target="_blank" rel="noopener"><code class="inline">toolbar.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/sandblox/tools" target="_blank" rel="noopener"><code class="inline">tools/</code></a> フォルダ。作る道具は、画面下のボタンと数字キーで切り替えます。</p>
+  <p>要は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/tool-manager.ts" target="_blank" rel="noopener"><code class="inline">tool-manager.ts</code></a>。「必ず1つだけ有効」を守るため、切り替え時はまず<b>古いツールを止めてから</b>新しいツールを起動します。各ツールは <code class="inline">activate()</code> / <code class="inline">deactivate()</code> だけを持つ最小の約束（<code class="inline">Tool</code> インターフェース）で、共有の道具箱（マウス・ドラッガー・選択枠・音）を受け取ります。</p>
+  <table>
+    <tr><th>キー</th><th>ツール</th><th>すること</th></tr>
+    <tr><td><kbd>1</kbd></td><td>移動 Move</td><td>掴んで、面に沿ってドラッグ。1スタッド刻みで吸着</td></tr>
+    <tr><td><kbd>2</kbd></td><td>複製 Clone</td><td>真上の柱の頂上に複製を生成（連打で塔になる）。“ポン”と鳴る</td></tr>
+    <tr><td><kbd>3</kbd></td><td>リサイズ Resize</td><td>6個のボールを掴んで、その面の向きに1スタッドずつ伸縮</td></tr>
+    <tr><td><kbd>4</kbd></td><td>削除 Delete</td><td>クリックで消去。爆発音。ロック（土台）は消えない</td></tr>
+    <tr><td><kbd>5</kbd></td><td>ペイント Paint</td><td>14色パレットから選んで塗る。ホバー中は枠が色見本に</td></tr>
+  </table>
+  <p>ツールバーは <kbd>1</kbd>〜<kbd>5</kbd> で選択、<kbd>Esc</kbd> で解除。同じボタンをもう一度押すと解除になります。ボタンは <code class="inline">click</code> ではなく <code class="inline">mousedown</code> で反応し <code class="inline">preventDefault</code> する——こうしてキャンバスからフォーカスを奪わないので、ツールを持ったままでも WASD で歩けます。</p>
+  <h3>14色の「クラシック」パレット</h3>
+  <p>ペイントの色は、あの積み木でおなじみの定番14色。<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/paint-tool.ts" target="_blank" rel="noopener"><code class="inline">paint-tool.ts</code></a> に定数として並んでいます。</p>
+  <div class="swatches" aria-hidden="true">
+    <span class="sw" style="background:#C4281C" title="Bright red"></span>
+    <span class="sw" style="background:#DA8541" title="Bright orange"></span>
+    <span class="sw" style="background:#F5CD30" title="Bright yellow"></span>
+    <span class="sw" style="background:#4B974B" title="Bright green"></span>
+    <span class="sw" style="background:#0D69AC" title="Bright blue"></span>
+    <span class="sw" style="background:#6B327C" title="Bright violet"></span>
+    <span class="sw" style="background:#F2F3F3" title="White"></span>
+    <span class="sw" style="background:#D7C59A" title="Brick yellow"></span>
+    <span class="sw" style="background:#E5E4DF" title="Light stone grey"></span>
+    <span class="sw" style="background:#A3A2A5" title="Medium stone grey"></span>
+    <span class="sw" style="background:#635F62" title="Dark stone grey"></span>
+    <span class="sw" style="background:#1B2A35" title="Black"></span>
+    <span class="sw" style="background:#694028" title="Reddish brown"></span>
+    <span class="sw" style="background:#27462D" title="Earth green"></span>
+  </div>
+</section>
+
+<section id="grab">
+  <p class="ch">第14章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#4E9AD6"/><polygon points="3,29 50,56 50,112 3,85" fill="#0D69AC"/><polygon points="97,29 50,56 50,112 97,85" fill="#084B7D"/></g><g fill="#A8CFEE"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>マウスで掴むしくみ</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/mouse.ts" target="_blank" rel="noopener"><code class="inline">mouse.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/dragger.ts" target="_blank" rel="noopener"><code class="inline">dragger.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/ray-helpers.ts" target="_blank" rel="noopener"><code class="inline">ray-helpers.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/sandblox/adornments" target="_blank" rel="noopener"><code class="inline">adornments/</code></a>。「クリックした先のブロック」を、どう突き止めているのか。</p>
+  <p>核は <code class="inline">mouse.ts</code>——ツール用マウス操作の<b>唯一の窓口</b>です。マウスが動くたびに画面の点から3Dの光線を作り（<code class="inline">ray-helpers.ts</code>、reverse-Z 前提のアンプロジェクト）、台帳にレイキャストして「今どのパーツ・どの面・空間のどこ」を指しているかを更新。その結果を、登録された各ハンドラへ<b>「消費できるイベント」</b>として順に配ります。誰かが <code class="inline">consumed</code> を立てたら、そこで配布は止まります。</p>
+  <div class="callout blue"><b>🎯 ハンドルが一番に手を挙げる</b><p>リサイズ用の6個のボール（<code class="inline">handles.ts</code>）は、どのツールよりも<b>先に</b>マウスへ登録されます。だからボールを掴んだクリックはハンドルが「消費」し、ツールには届きません。おかげで、平地のクリックは選択、ボールのクリックはリサイズ、と自然に切り分けられます。</p></div>
+  <p>掴んで動かす部分は <code class="inline">dragger.ts</code> が担当（移動ツールと複製ツールが共用）。カーソル下の面にブロックを吸い付かせ、<b>1スタッドのグリッド</b>にスナップし、土台の外（±256）へは出さない。ドラッグ中に <kbd>R</kbd> / <kbd>T</kbd> で90°回して置き直せます。選択中のブロックを囲む<b>青い枠線</b>（<code class="inline">selection-box.ts</code>、12本の辺）も、これらのツールが共通で使う目印です。</p>
+  <table>
+    <tr><th>部品</th><th>役割・数値</th></tr>
+    <tr><td><code class="inline">mouse.ts</code></td><td>ピッキングの窓口。ロックされたパーツは対象外</td></tr>
+    <tr><td><code class="inline">dragger.ts</code></td><td>1スタッド吸着・±256クランプ・R/T回転</td></tr>
+    <tr><td><code class="inline">ray-helpers.ts</code></td><td>画面→世界の光線と、光線×AABB の交差計算（reverse-Z）</td></tr>
+    <tr><td><code class="inline">handles.ts</code></td><td>面ごとの6個のボール（径 0.9・隙間 1.0）。1スタッド刻みでドラッグ量を発火</td></tr>
+    <tr><td><code class="inline">selection-box.ts</code></td><td>選択枠（12辺・厚み 0.12）。ツールごとに色が変わる</td></tr>
+  </table>
+</section>
+
+<section id="sound">
+  <p class="ch">第15章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#9B63AC"/><polygon points="3,29 50,56 50,112 3,85" fill="#6B327C"/><polygon points="97,29 50,56 50,112 97,85" fill="#4B2258"/></g><g fill="#CDAAD8"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>音の合成</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/sounds.ts" target="_blank" rel="noopener"><code class="inline">sounds.ts</code></a>（247行）。効果音は<b>1つも音声ファイルを使わず</b>、WebAudio でその場合成します。</p>
+  <p><code class="inline">AudioContext</code> は最初に音を鳴らす瞬間に遅延生成し、WebAudio が使えない環境（ヘッドレステスト等）では静かに何もしません。波形はサイン波やノイズを、フィルタと音量エンベロープで加工して作ります。</p>
+  <table>
+    <tr><th>音</th><th>作り方（抜粋）</th></tr>
+    <tr><td>複製のポン</td><td>915Hz と 935Hz のわずかにずれたサイン波2本＋余韻のエコー</td></tr>
+    <tr><td>削除の爆発</td><td>ブラウンノイズの“ドン”（1.35秒）＋ローパス・ピーキング＋出だしの破裂音</td></tr>
+    <tr><td>リサイズのカチ</td><td>ハイパスをかけたごく短いノイズのチッ（0.035秒）</td></tr>
+    <tr><td>足音</td><td>強弱パターン <code class="inline">[1,3,3,2,3,2]</code> を巡回。毎回ランダムに揺らす</td></tr>
+    <tr><td>ジャンプ</td><td>バンドパスのノイズを 380→780Hz へ掃引した“シュッ”</td></tr>
+  </table>
+  <p>足音は歩きクリップに合わせ、着地している間だけ <code class="inline">1/3</code> 秒ごとに再生。<code class="inline">[1,3,3,2,3,2]</code> という強弱の並びで、単調にならない歩きのリズムを作っています。</p>
+</section>
+
+<section id="save">
+  <p class="ch">第16章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#78C078"/><polygon points="3,29 50,56 50,112 3,85" fill="#4B974B"/><polygon points="97,29 50,56 50,112 97,85" fill="#326232"/></g><g fill="#B4DEB4"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>保存と持ち運び</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/persistence.ts" target="_blank" rel="noopener"><code class="inline">persistence.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/world-io.ts" target="_blank" rel="noopener"><code class="inline">world-io.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/map-io-ui.ts" target="_blank" rel="noopener"><code class="inline">map-io-ui.ts</code></a>。作った世界を残し、ファイルとして持ち運びます。</p>
+  <p>心臓は <code class="inline">world-io.ts</code> が定める<b>たった1つの保存フォーマット</b>。自動セーブ（localStorage）も、書き出し／読み込みも、default-map も、全部この同じ形を使うので<b>互換性が保たれます</b>。キー名は短く詰め、ロックされたパーツ（＝土台）は保存しません。</p>
+  <pre class="code"><span class="cm">// world-io の JSON（version 1）</span>
+{ <span class="kw">version</span>: <span class="st">1</span>,
+  <span class="kw">parts</span>: [
+    { s:[<span class="st">2</span>,<span class="st">1</span>,<span class="st">1</span>],  <span class="cm">// size 大きさ</span>
+      p:[<span class="st">0</span>,<span class="st">0.5</span>,<span class="st">0</span>], <span class="cm">// position 位置</span>
+      q:[<span class="st">0</span>,<span class="st">0</span>,<span class="st">0</span>,<span class="st">1</span>], <span class="cm">// quaternion 回転</span>
+      c:[<span class="st">0.16</span>,<span class="st">0.5</span>,<span class="st">0.73</span>], <span class="cm">// color 色</span>
+      sh:<span class="st">1</span> <span class="cm">// shape 1=斜面（省略=ブロック）</span>
+    }
+  ] }</pre>
+  <p><code class="inline">persistence.ts</code> は、パーツが変わるたびに <code class="inline">250ms</code> だけ待ってまとめて保存（デバウンス）し、タブを閉じる直前にも書き出します。読み込み側は防御的で、<code class="inline">version</code> が違ったり値の形が壊れていたら、その要素を飛ばして「1未満なら1に丸める」と安全に倒します。<code class="inline">map-io-ui.ts</code> の Export/Import は同じ形式なので、<b>保存データとエクスポートしたマップは互換</b>。右上のリーダーボード（<code class="inline">Builder 1000〜9999</code>／スコア0）は、雰囲気づくりの飾りです。</p>
+</section>
+
+<section id="themes">
+  <p class="ch">第17章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F2233" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#E86A5E"/><polygon points="3,29 50,56 50,112 3,85" fill="#C4281C"/><polygon points="97,29 50,56 50,112 97,85" fill="#93200F"/></g><g fill="#F4A79E"><ellipse cx="42" cy="22" rx="5" ry="2.5"/><ellipse cx="58" cy="29" rx="5" ry="2.5"/></g></svg>設計テーマ</h2>
+  <p class="lede">35ファイルに散らばって見えて、じつは一貫した4つの考え方が通っています。</p>
+  <div class="grid2">
+    <div class="term"><b>🧱 何もかも「1つの Part」</b><p>土台もブロックも斜面も同じ Part。台帳（workspace）も描画も当たり判定も1本に集約。種類を増やさず、フラグと形で表現する。</p></div>
+    <div class="term"><b>🔌 部品は小さな約束でつなぐ</b><p>ツールは <code class="inline">activate/deactivate</code> だけ、当たり判定は <code class="inline">getAABB()</code> だけ。細い interface で結ぶから、部品を足しても全体が揺れない。</p></div>
+    <div class="term"><b>🎨 アセットは極力その場生成</b><p>スタッドのテクスチャも、効果音も、キャラの顔も、コードで生成。外部依存は空の画像と初期マップくらい。読めば全部わかる。</p></div>
+    <div class="term"><b>🧭 作る側と遊ぶ側を分ける</b><p>編集ツールとキャラクター操作は独立し、共有するのは「台帳」だけ。だから片方を読むとき、もう片方を気にせず読める。</p></div>
+  </div>
+  <div class="callout"><b>📝 コメントは「理由の記録」</b><p>このコードのコメントには「なぜそうしたか」がていねいに書かれています。<i>GPUカリングを呼ばないと編集が反映されない／巨大な土台を影の落とし手から外す理由／90°刻みだから面の向きテーブルが厳密</i>——判断の理由ごと読めるのが、このサンプルの教材価値です。Minecraft・Platformer・Tetris デモと共通する“コメント文化”が、ここにも息づいています。</p></div>
+</section>
+
+<section id="files">
+  <p class="ch">第18章</p>
+  <h2><svg viewBox="0 0 100 100" width="26" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="8" fill="#17222E" stroke="#0F2233" stroke-width="4"/><g stroke="#4E9AD6" stroke-width="5" stroke-linecap="round"><line x1="26" y1="32" x2="74" y2="32"/><line x1="26" y1="50" x2="74" y2="50"/><line x1="26" y1="68" x2="60" y2="68"/></g></svg>ファイル一覧（全35ファイル）</h2>
+  <p class="lede">コードリーディングのおともに。行数は <code class="inline">master</code> ブランチのソース実測値です。<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/character.ts" target="_blank" rel="noopener"><code class="inline">character.ts</code></a> が最大で、合計およそ5,293行。</p>
+  <table>
+    <tr><th>ファイル</th><th style="width:12%">行数</th><th>やくわり</th></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--stage); color:#E7EEF5">エントリ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox.ts" target="_blank" rel="noopener"><code class="inline">sandblox.ts</code></a></td><td class="num">149</td><td>エンジン・空・光・ワールド・キャラ・ツールを組み立ててループ開始</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--green-bg)">ワールドとパーツ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/part.ts" target="_blank" rel="noopener"><code class="inline">part.ts</code></a></td><td class="num">249</td><td>1個のブロック。大きさ・位置・回転・色・ロックを持つ最小単位</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/part-renderer.ts" target="_blank" rel="noopener"><code class="inline">part-renderer.ts</code></a></td><td class="num">334</td><td>thin instancing による一括描画。3プール・面の向きをアルファに符号化</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/workspace.ts" target="_blank" rel="noopener"><code class="inline">workspace.ts</code></a></td><td class="num">118</td><td>全パーツの唯一の台帳。レイキャストと衝突源を一手に提供</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/lighting.ts" target="_blank" rel="noopener"><code class="inline">lighting.ts</code></a></td><td class="num">63</td><td>環境光＋太陽＋PCF影(2048)の照明リグと影キャスター登録</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/rigid-body.ts" target="_blank" rel="noopener"><code class="inline">rigid-body.ts</code></a></td><td class="num">20</td><td>衝突用インターフェース（毎フレーム AABB を返す約束）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/world.ts" target="_blank" rel="noopener"><code class="inline">world.ts</code></a></td><td class="num">17</td><td>空のスカイボックス（TropicalSunnyDay）を読み込む</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--orange-bg)">スタッドの質感</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/stud-texture.ts" target="_blank" rel="noopener"><code class="inline">stud-texture.ts</code></a></td><td class="num">198</td><td>丸角SDFから継ぎ目なしのスタッド・タイル（色＋法線）を生成</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/stud-material-plugin.ts" target="_blank" rel="noopener"><code class="inline">stud-material-plugin.ts</code></a></td><td class="num">77</td><td>標準マテリアルにWGSLを差し込み、上面だけにスタッドを描く</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--yellow-bg)">キャラクター</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/character.ts" target="_blank" rel="noopener"><code class="inline">character.ts</code></a></td><td class="num">647</td><td>四角い人形を丸め箱・円柱で組む（形だけ・笑顔テクスチャ）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/player-controller.ts" target="_blank" rel="noopener"><code class="inline">player-controller.ts</code></a></td><td class="num">119</td><td>5部品を束ね、毎フレームの処理順と状態機械を仕切る</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/movement-controller.ts" target="_blank" rel="noopener"><code class="inline">movement-controller.ts</code></a></td><td class="num">206</td><td>カメラ基準WASD(16studs/s)・スライド衝突・段差の自動よじ登り</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/animation-controller.ts" target="_blank" rel="noopener"><code class="inline">animation-controller.ts</code></a></td><td class="num">217</td><td>rest/walk/jumpの手作りクリップとクロスフェード(150ms)</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/input-manager.ts" target="_blank" rel="noopener"><code class="inline">input-manager.ts</code></a></td><td class="num">172</td><td>プレイヤー移動のキー/マウス入力と移動開始/停止イベント</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/physics-controller.ts" target="_blank" rel="noopener"><code class="inline">physics-controller.ts</code></a></td><td class="num">120</td><td>手計算の重力(196)・ジャンプ(50)・地面吸着・落下復活</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/camera-controller.ts" target="_blank" rel="noopener"><code class="inline">camera-controller.ts</code></a></td><td class="num">90</td><td>三人称アークローテートカメラ・ズーム・地面めり込み回避</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/events.ts" target="_blank" rel="noopener"><code class="inline">events.ts</code></a></td><td class="num">49</td><td>コントローラ間の型付きイベント発行器（jumped/landed等）</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--orange-bg)">編集ツール</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/toolbar.ts" target="_blank" rel="noopener"><code class="inline">toolbar.ts</code></a></td><td class="num">239</td><td>下部の5ボタン・数字キー・Escのツール切替UI</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/paint-tool.ts" target="_blank" rel="noopener"><code class="inline">tools/paint-tool.ts</code></a></td><td class="num">143</td><td>14色パレットで塗る。色見本DOMを生成</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/resize-tool.ts" target="_blank" rel="noopener"><code class="inline">tools/resize-tool.ts</code></a></td><td class="num">130</td><td>ハンドルを掴んで面方向に1スタッド刻みで伸縮</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/clone-tool.ts" target="_blank" rel="noopener"><code class="inline">tools/clone-tool.ts</code></a></td><td class="num">105</td><td>真上の柱の頂上に複製（連打で塔）。掴んだまま配置</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/move-tool.ts" target="_blank" rel="noopener"><code class="inline">tools/move-tool.ts</code></a></td><td class="num">60</td><td>掴んでドラッグ移動。ホバーで選択枠を表示</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/delete-tool.ts" target="_blank" rel="noopener"><code class="inline">tools/delete-tool.ts</code></a></td><td class="num">50</td><td>クリックで破壊＋爆発音（ロックは対象外）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/tool-manager.ts" target="_blank" rel="noopener"><code class="inline">tools/tool-manager.ts</code></a></td><td class="num">31</td><td>常に1つだけ有効。古い→止めて新しい→起動</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/tools/tool.ts" target="_blank" rel="noopener"><code class="inline">tools/tool.ts</code></a></td><td class="num">26</td><td>Toolインターフェースと共有道具箱ToolContext</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--blue-bg)">掴む・当たり判定</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/adornments/handles.ts" target="_blank" rel="noopener"><code class="inline">adornments/handles.ts</code></a></td><td class="num">328</td><td>面ごとの6個のボール。1スタッド刻みのドラッグ量を発火</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/ray-helpers.ts" target="_blank" rel="noopener"><code class="inline">ray-helpers.ts</code></a></td><td class="num">263</td><td>画面→世界の光線とAABB交差（reverse-Z前提）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/dragger.ts" target="_blank" rel="noopener"><code class="inline">dragger.ts</code></a></td><td class="num">158</td><td>グリッド吸着ドラッグ（移動/複製で共用・R/T回転）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/adornments/selection-box.ts" target="_blank" rel="noopener"><code class="inline">adornments/selection-box.ts</code></a></td><td class="num">147</td><td>選択パーツを囲む12辺のワイヤ枠（ツールごとに色）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/mouse.ts" target="_blank" rel="noopener"><code class="inline">mouse.ts</code></a></td><td class="num">139</td><td>ツール用マウスの唯一の窓口。消費可能なレイイベントを配布</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--violet-bg)">音・保存・UI</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/sounds.ts" target="_blank" rel="noopener"><code class="inline">sounds.ts</code></a></td><td class="num">247</td><td>WebAudioで全効果音を合成（音声ファイル0）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/persistence.ts" target="_blank" rel="noopener"><code class="inline">persistence.ts</code></a></td><td class="num">116</td><td>localStorageへデバウンス自動保存（250ms）と起動時復元</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/map-io-ui.ts" target="_blank" rel="noopener"><code class="inline">map-io-ui.ts</code></a></td><td class="num">103</td><td>map.jsonの書き出し／読み込みボタン</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/world-io.ts" target="_blank" rel="noopener"><code class="inline">world-io.ts</code></a></td><td class="num">88</td><td>唯一の保存フォーマット（version 1）。防御的な読み込み</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox/leaderboard.ts" target="_blank" rel="noopener"><code class="inline">leaderboard.ts</code></a></td><td class="num">75</td><td>右上の飾りのスコア表（Builder 1000〜9999／スコア0）</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--ink-soft)">行数は <code class="inline">master</code> ブランチ（2026年時点）のソース実測値です。合計およそ5,293行（35ファイル）。README を含めると36ファイル。</p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="inner">
+    <p>ソースコード：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/sandblox.ts" target="_blank" rel="noopener">BabylonJS/Babylon-Lite — lab/lite/src/demos/sandblox.ts</a>（コンポーネント群は同階層の <a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/sandblox" target="_blank" rel="noopener">sandblox/</a> フォルダ）</p>
+    <p>空の画像は Babylon.js Playground の <code class="inline">TropicalSunnyDay</code> スカイボックスを参照しています。スタッドのテクスチャ・キャラクターの顔・効果音は、すべてコードでその場生成しています。本ページの図は mermaid.js とインラインSVGで描画しています。</p>
+    <p>解説対象のソースコード（Babylon-Lite）は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/LICENSE" target="_blank" rel="noopener">Apache License 2.0</a> で公開されています。本ページで引用しているコード断片・数値の著作権はそれぞれの著作者に帰属します。図の描画に使用している <a href="https://mermaid.js.org/" target="_blank" rel="noopener">mermaid.js</a>（MIT License）と Web フォント（SIL Open Font License）は CDN から参照しています。</p>
+    <p>本ページおよび解説対象のデモは、特定の玩具ブランドやオンラインプラットフォームとは無関係の、独立した教育目的のコンテンツです。</p>
+  </div>
+</footer>
+
+<script type="module">
+try {
+  const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11.16.0/+esm');
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    securityLevel: 'loose',
+    fontFamily: "'Zen Kaku Gothic New', sans-serif",
+    flowchart: { htmlLabels: true, curve: 'linear', nodeSpacing: 34, rankSpacing: 42 },
+    themeVariables: {
+      fontSize: '13.5px',
+      primaryColor: '#E6EDF5',
+      primaryTextColor: '#1C2530',
+      primaryBorderColor: '#0D69AC',
+      lineColor: '#8F9AA6',
+      secondaryColor: '#FBF1D6',
+      tertiaryColor: '#E6F1E6',
+      clusterBkg: '#F4F8FC',
+      clusterBorder: '#C1D2E2',
+      edgeLabelBackground: '#EDF3FB',
+      titleColor: '#1C2530'
+    }
+  });
+  // Web フォント（Zen Kaku Gothic New 等）の読み込みを待ってから測定・描画する。
+  // 待たないとフォールバックフォントの幅でノードが確定し、本フォント差し替え後に
+  // 日本語テキストがノード枠からはみ出して切れてしまう。
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) {}
+  }
+  await mermaid.run({ querySelector: 'pre.mermaid' });
+} catch (e) {
+  console.error('mermaid の読み込みに失敗しました（オフラインの可能性）:', e);
+}
+</script>
+</body>
+</html>
