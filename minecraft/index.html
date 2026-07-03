@@ -548,38 +548,39 @@ interface SaveData {
   <p class="ch">第15章</p>
   <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#263228" stroke-opacity=".22" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>ファイル一覧（全24ファイル）</h2>
   <p class="lede">コードリーディングのおともに。行数は目安として。</p>
+  <p class="lede">ファイル名は <a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/minecraft" target="_blank" rel="noopener">GitHub 上の該当ファイル</a>へのリンクです（別タブで開きます）。</p>
   <table>
     <tr><th>ファイル</th><th style="width:12%">行数</th><th>やくわり</th></tr>
     <tr class="gh"><td colspan="3" style="background:var(--stone-bg)">エントリポイント</td></tr>
-    <tr><td><code class="inline">minecraft.ts</code></td><td class="num">236</td><td>全部品の組み立てとフレームループ。ゲームのルールは持たない</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft.ts" target="_blank" rel="noopener"><code class="inline">minecraft.ts</code></a></td><td class="num">236</td><td>全部品の組み立てとフレームループ。ゲームのルールは持たない</td></tr>
     <tr class="gh"><td colspan="3" style="background:var(--grass-bg)">基盤層</td></tr>
-    <tr><td><code class="inline">constants.ts</code></td><td class="num">18</td><td>チャンク寸法（16×16×96）や海面の高さ（30）などの定数</td></tr>
-    <tr><td><code class="inline">noise.ts</code></td><td class="num">82</td><td>seed から同じ模様を再現する決定論ノイズ（fBm）</td></tr>
-    <tr><td><code class="inline">blocks.ts</code></td><td class="num">180</td><td>ブロック図鑑。23種類の見た目と性質をフラグで宣言</td></tr>
-    <tr><td><code class="inline">raycast.ts</code></td><td class="num">71</td><td>視線の先のブロックを探す格子レイキャスト</td></tr>
-    <tr><td><code class="inline">audio.ts</code></td><td class="num">125</td><td>壊す・置く・足音の効果音を WebAudio でその場で合成</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/constants.ts" target="_blank" rel="noopener"><code class="inline">constants.ts</code></a></td><td class="num">18</td><td>チャンク寸法（16×16×96）や海面の高さ（30）などの定数</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/noise.ts" target="_blank" rel="noopener"><code class="inline">noise.ts</code></a></td><td class="num">82</td><td>seed から同じ模様を再現する決定論ノイズ（fBm）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/blocks.ts" target="_blank" rel="noopener"><code class="inline">blocks.ts</code></a></td><td class="num">180</td><td>ブロック図鑑。23種類の見た目と性質をフラグで宣言</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/raycast.ts" target="_blank" rel="noopener"><code class="inline">raycast.ts</code></a></td><td class="num">71</td><td>視線の先のブロックを探す格子レイキャスト</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/audio.ts" target="_blank" rel="noopener"><code class="inline">audio.ts</code></a></td><td class="num">125</td><td>壊す・置く・足音の効果音を WebAudio でその場で合成</td></tr>
     <tr class="gh"><td colspan="3" style="background:var(--grass-bg)">ワールド生成・照明層</td></tr>
-    <tr><td><code class="inline">worldgen.ts</code></td><td class="num">197</td><td>ノイズ→バイオーム→地形・洞窟・鉱石・木の生成</td></tr>
-    <tr><td><code class="inline">world.ts</code></td><td class="num">200</td><td>チャンクの保管庫。プレイヤーの編集を差分として記録</td></tr>
-    <tr><td><code class="inline">world-light.ts</code></td><td class="num">317</td><td>スカイライト＋ブロックライトの2チャネル光計算</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/worldgen.ts" target="_blank" rel="noopener"><code class="inline">worldgen.ts</code></a></td><td class="num">197</td><td>ノイズ→バイオーム→地形・洞窟・鉱石・木の生成</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/world.ts" target="_blank" rel="noopener"><code class="inline">world.ts</code></a></td><td class="num">200</td><td>チャンクの保管庫。プレイヤーの編集を差分として記録</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/world-light.ts" target="_blank" rel="noopener"><code class="inline">world-light.ts</code></a></td><td class="num">317</td><td>スカイライト＋ブロックライトの2チャネル光計算</td></tr>
     <tr class="gh"><td colspan="3" style="background:var(--stone-bg)">描画・マテリアル層</td></tr>
-    <tr><td><code class="inline">atlas.ts</code></td><td class="num">97</td><td>ブロックのPNGを1枚のテクスチャ台紙にまとめる</td></tr>
-    <tr><td><code class="inline">mesher.ts</code></td><td class="num">223</td><td>見える面だけ三角形化。頂点AOと対角線の工夫つき</td></tr>
-    <tr><td><code class="inline">voxel-material.ts</code></td><td class="num">234</td><td>WGSLシェーダ本体。不透明・切り抜き・半透明の3変種</td></tr>
-    <tr><td><code class="inline">chunk-renderer.ts</code></td><td class="num">255</td><td>チャンクの出し入れ係。予算管理と安全な後片付け</td></tr>
-    <tr><td><code class="inline">sky.ts</code></td><td class="num">121</td><td>空のドーム。地平線から天頂へのグラデーションと太陽</td></tr>
-    <tr><td><code class="inline">clouds.ts</code></td><td class="num">127</td><td>頭上を流れる雲。1枚の板にノイズで模様を描く</td></tr>
-    <tr><td><code class="inline">particles.ts</code></td><td class="num">132</td><td>ブロック破壊時に飛び散る小さな粒</td></tr>
-    <tr><td><code class="inline">highlight.ts</code></td><td class="num">78</td><td>ねらったブロックを囲う光る枠</td></tr>
-    <tr><td><code class="inline">mob-material.ts</code></td><td class="num">117</td><td>動物用シェーダ。頂点カラーをそのまま体の色に</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/atlas.ts" target="_blank" rel="noopener"><code class="inline">atlas.ts</code></a></td><td class="num">97</td><td>ブロックのPNGを1枚のテクスチャ台紙にまとめる</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/mesher.ts" target="_blank" rel="noopener"><code class="inline">mesher.ts</code></a></td><td class="num">223</td><td>見える面だけ三角形化。頂点AOと対角線の工夫つき</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/voxel-material.ts" target="_blank" rel="noopener"><code class="inline">voxel-material.ts</code></a></td><td class="num">234</td><td>WGSLシェーダ本体。不透明・切り抜き・半透明の3変種</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/chunk-renderer.ts" target="_blank" rel="noopener"><code class="inline">chunk-renderer.ts</code></a></td><td class="num">255</td><td>チャンクの出し入れ係。予算管理と安全な後片付け</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/sky.ts" target="_blank" rel="noopener"><code class="inline">sky.ts</code></a></td><td class="num">121</td><td>空のドーム。地平線から天頂へのグラデーションと太陽</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/clouds.ts" target="_blank" rel="noopener"><code class="inline">clouds.ts</code></a></td><td class="num">127</td><td>頭上を流れる雲。1枚の板にノイズで模様を描く</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/particles.ts" target="_blank" rel="noopener"><code class="inline">particles.ts</code></a></td><td class="num">132</td><td>ブロック破壊時に飛び散る小さな粒</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/highlight.ts" target="_blank" rel="noopener"><code class="inline">highlight.ts</code></a></td><td class="num">78</td><td>ねらったブロックを囲う光る枠</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/mob-material.ts" target="_blank" rel="noopener"><code class="inline">mob-material.ts</code></a></td><td class="num">117</td><td>動物用シェーダ。頂点カラーをそのまま体の色に</td></tr>
     <tr class="gh"><td colspan="3" style="background:var(--water-bg)">機能・ゲームロジック層</td></tr>
-    <tr><td><code class="inline">controls.ts</code></td><td class="num">374</td><td>操作・歩行・ジャンプ・泳ぎ・ブロックとの衝突判定</td></tr>
-    <tr><td><code class="inline">water-sim.ts</code></td><td class="num">331</td><td>水の流れ。1リングずつ広がる世代方式</td></tr>
-    <tr><td><code class="inline">falling-blocks.ts</code></td><td class="num">260</td><td>砂・砂利の落下。すり抜け/重なり/柱くずれ対策つき</td></tr>
-    <tr><td><code class="inline">mobs.ts</code></td><td class="num">491</td><td>動物の組み立て・出現・お散歩AI・歩行アニメ</td></tr>
-    <tr><td><code class="inline">lighting.ts</code></td><td class="num">149</td><td>昼夜サイクルの司令塔。太陽・空・霧の色を一元管理</td></tr>
-    <tr><td><code class="inline">hud.ts</code></td><td class="num">136</td><td>照準・ホットバー・デバッグ表示。DOMだけで実装</td></tr>
-    <tr><td><code class="inline">save-load.ts</code></td><td class="num">118</td><td>世界のファイル保存と読み込み</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/controls.ts" target="_blank" rel="noopener"><code class="inline">controls.ts</code></a></td><td class="num">374</td><td>操作・歩行・ジャンプ・泳ぎ・ブロックとの衝突判定</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/water-sim.ts" target="_blank" rel="noopener"><code class="inline">water-sim.ts</code></a></td><td class="num">331</td><td>水の流れ。1リングずつ広がる世代方式</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/falling-blocks.ts" target="_blank" rel="noopener"><code class="inline">falling-blocks.ts</code></a></td><td class="num">260</td><td>砂・砂利の落下。すり抜け/重なり/柱くずれ対策つき</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/mobs.ts" target="_blank" rel="noopener"><code class="inline">mobs.ts</code></a></td><td class="num">491</td><td>動物の組み立て・出現・お散歩AI・歩行アニメ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/lighting.ts" target="_blank" rel="noopener"><code class="inline">lighting.ts</code></a></td><td class="num">149</td><td>昼夜サイクルの司令塔。太陽・空・霧の色を一元管理</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/hud.ts" target="_blank" rel="noopener"><code class="inline">hud.ts</code></a></td><td class="num">136</td><td>照準・ホットバー・デバッグ表示。DOMだけで実装</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/minecraft/save-load.ts" target="_blank" rel="noopener"><code class="inline">save-load.ts</code></a></td><td class="num">118</td><td>世界のファイル保存と読み込み</td></tr>
   </table>
 </section>
 
