@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>光るブロックのつくりかた — Babylon Lite tetris デモ解説</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F1F0F5;
+  --panel: #FFFFFF;
+  --ink: #23212B;
+  --ink-soft: #6A6676;
+  --line: #E4E2EB;
+  --line-strong: #CFCBDA;
+  --i: #DB7D96; --i-deep: #B25A73; --i-bg: #FBEEF2;
+  --o: #B9B9C6; --o-deep: #8C8C9C; --o-bg: #F2F2F6;
+  --t: #E58A5E; --t-deep: #BE6740; --t-bg: #FBEDE4;
+  --s: #C0463F; --s-deep: #97312B; --s-bg: #F8E6E4;
+  --z: #E0A93A; --z-deep: #AE7C18; --z-bg: #FBF1D8;
+  --j: #62627A; --j-deep: #45455A; --j-bg: #ECECF2;
+  --l: #3DA172; --l-deep: #2A7C55; --l-bg: #E5F3EC;
+  --stage: #1B1A23;
+  --font-display: 'DotGothic16', 'Zen Kaku Gothic New', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-code: 'M PLUS 1 Code', monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.95;
+}
+a { color: var(--j-deep); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--i); outline-offset: 2px; border-radius: 4px; }
+::selection { background: #F6D9E1; }
+
+/* ── ヒーロー（暗いスタジオ） ─────────── */
+.hero {
+  background:
+    radial-gradient(120% 90% at 72% 8%, rgba(224,169,58,.16), transparent 46%),
+    radial-gradient(90% 80% at 20% 100%, rgba(219,125,150,.14), transparent 52%),
+    linear-gradient(180deg, #22212C 0%, var(--stage) 70%, #141319 100%);
+  border-bottom: 3px solid #0F0E14;
+  padding: 64px 24px 54px;
+  color: #EFEBF2;
+}
+.hero-inner {
+  max-width: 1000px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center;
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 13px; letter-spacing: .22em;
+  color: #E7C87E; margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(26px, 4.3vw, 41px);
+  line-height: 1.45; margin: 0 0 14px; letter-spacing: .01em;
+  color: #FBF8FF;
+}
+.hero p.sub { margin: 0; max-width: 560px; color: #C7C1D4; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 34px; margin-top: 26px; font-family: var(--font-code); }
+.stat b { display: block; font-size: 24px; line-height: 1.3; font-weight: 700; color: #FBF8FF; }
+.stat span { font-size: 12px; color: #A9A2BA; letter-spacing: .06em; }
+.cubes { display: grid; grid-template-columns: repeat(2, 66px); gap: 20px 18px; }
+.cubes svg { filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+.cubes svg:nth-child(1) { animation: bob 5s ease-in-out infinite; }
+.cubes svg:nth-child(2) { animation: bob 5s ease-in-out .8s infinite; }
+.cubes svg:nth-child(3) { animation: bob 5s ease-in-out 1.6s infinite; }
+.cubes svg:nth-child(4) { animation: bob 5s ease-in-out 2.4s infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+/* ── レイアウト ───────────────────────── */
+.layout {
+  max-width: 1060px; margin: 0 auto;
+  padding: 44px 24px 90px;
+  display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 46px;
+}
+nav.toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; }
+nav.toc .toc-title { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 10px 8px; }
+nav.toc a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 8px; border-radius: 6px;
+  color: var(--ink-soft); text-decoration: none; line-height: 1.5;
+}
+nav.toc a:hover { background: var(--panel); color: var(--ink); }
+.chip { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.18); }
+
+main { min-width: 0; }
+section { margin: 0 0 78px; scroll-margin-top: 26px; }
+.ch { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 6px; }
+h2 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: 25px; line-height: 1.4;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 10px;
+}
+h2 svg { flex: none; }
+h3 { font-size: 16.5px; margin: 34px 0 8px; }
+p { margin: 0 0 16px; }
+.lede { color: var(--ink-soft); margin-bottom: 22px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.term { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.term b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+.term p { font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.8; }
+
+.callout { border: 1px solid var(--line); border-left: 5px solid var(--z); background: var(--z-bg); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+.callout.pink { border-left-color: var(--i); background: var(--i-bg); }
+.callout.green { border-left-color: var(--l); background: var(--l-bg); }
+.callout.slate { border-left-color: var(--j); background: var(--j-bg); }
+.callout b { font-size: 14.5px; }
+.callout p { margin: 4px 0 0; font-size: 14px; }
+
+pre.mermaid {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 12px; margin: 20px 0;
+  display: flex; justify-content: center; overflow-x: auto;
+  font-family: var(--font-code); font-size: 13px; color: var(--ink-soft);
+}
+pre.code {
+  font-family: var(--font-code); font-size: 13px; line-height: 1.75;
+  background: var(--stage); color: #ECE7F3;
+  border-radius: 10px; padding: 18px 22px; overflow-x: auto; margin: 18px 0;
+}
+pre.code .cm { color: #9B93B4; }
+pre.code .kw { color: #E0A93A; }
+pre.code .st { color: #7FC9A0; }
+code.inline { font-family: var(--font-code); font-size: .88em; background: #E7E4EF; border-radius: 5px; padding: 1px 7px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 18px 0; }
+th { background: #ECEAF2; text-align: left; font-weight: 700; }
+th, td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.num { font-family: var(--font-code); text-align: right; white-space: nowrap; }
+tr.gh td { font-family: var(--font-display); font-size: 12.5px; letter-spacing: .12em; padding: 7px 14px; }
+kbd { font-family: var(--font-code); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line-strong); border-bottom-width: 3px; border-radius: 6px; padding: 1px 9px; white-space: nowrap; }
+
+footer { border-top: 3px solid var(--line-strong); margin-top: 30px; padding: 28px 24px 60px; }
+footer .inner { max-width: 1060px; margin: 0 auto; font-size: 13.5px; color: var(--ink-soft); }
+
+figure.fig { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 14px 12px; margin: 20px 0; }
+figure.fig figcaption { text-align: center; font-size: 13px; color: var(--ink-soft); margin-top: 10px; line-height: 1.75; padding: 0 12px; }
+
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; gap: 26px; padding-top: 20px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 0; }
+  nav.toc .toc-title { display: none; }
+  nav.toc .links { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  nav.toc a { white-space: nowrap; }
+  .hero-inner { grid-template-columns: 1fr; }
+  .cubes { grid-template-columns: repeat(4, 50px); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cubes svg { animation: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow">BABYLON LITE 公式デモを読む</p>
+      <h1>光るブロックの世界を、<br>1キューブずつ分解する。</h1>
+      <p class="sub">WebGPU 専用の軽量 3D エンジン「Babylon Lite」に付属する、3D テトリスのデモ。ツヤのあるキューブがどう成形され、どう照らされ、どう一気に描かれるのか——全 9 ファイルのしくみを初心者向けにやさしく解説します。</p>
+      <div class="stats">
+        <div class="stat"><b>9</b><span>ファイル</span></div>
+        <div class="stat"><b>約2,600</b><span>行のコード</span></div>
+        <div class="stat"><b>3</b><span>見た目スタイル</span></div>
+        <div class="stat"><b>0</b><span>音声ファイル（合成）</span></div>
+      </div>
+    </div>
+    <div class="cubes" aria-hidden="true">
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F0E14" stroke-opacity=".28" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F0AEBF"/><polygon points="3,29 50,56 50,112 3,85" fill="#DB7D96"/><polygon points="97,29 50,56 50,112 97,85" fill="#B25A73"/></g><ellipse cx="38" cy="22" rx="12" ry="6" fill="#fff" opacity=".45"/></svg>
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F0E14" stroke-opacity=".28" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#FFDD8F"/><polygon points="3,29 50,56 50,112 3,85" fill="#E0A93A"/><polygon points="97,29 50,56 50,112 97,85" fill="#B2831F"/></g><ellipse cx="38" cy="22" rx="12" ry="6" fill="#fff" opacity=".45"/></svg>
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F0E14" stroke-opacity=".28" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#71CFA0"/><polygon points="3,29 50,56 50,112 3,85" fill="#3DA172"/><polygon points="97,29 50,56 50,112 97,85" fill="#26744F"/></g><ellipse cx="38" cy="22" rx="12" ry="6" fill="#fff" opacity=".45"/></svg>
+      <svg viewBox="0 0 100 116" width="66"><g stroke="#0F0E14" stroke-opacity=".28" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#8B8B9E"/><polygon points="3,29 50,56 50,112 3,85" fill="#62627A"/><polygon points="97,29 50,56 50,112 97,85" fill="#45455A"/></g><ellipse cx="38" cy="22" rx="12" ry="6" fill="#fff" opacity=".4"/></svg>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">もくじ</p>
+  <div class="links">
+    <a href="#intro"><span class="chip" style="background:var(--i)"></span>このデモとは</a>
+    <a href="#play"><span class="chip" style="background:var(--z)"></span>あそびかた</a>
+    <a href="#glossary"><span class="chip" style="background:var(--j)"></span>用語ミニ辞典</a>
+    <a href="#arch"><span class="chip" style="background:var(--stage)"></span>全体の地図</a>
+    <a href="#boot"><span class="chip" style="background:var(--z)"></span>起動の流れ</a>
+    <a href="#rules"><span class="chip" style="background:var(--l)"></span>盤面とルール</a>
+    <a href="#pieces"><span class="chip" style="background:var(--i)"></span>7つのテトリミノ</a>
+    <a href="#shaping"><span class="chip" style="background:var(--t)"></span>キューブを成形する</a>
+    <a href="#instancing"><span class="chip" style="background:var(--stage)"></span>一気に描くしくみ</a>
+    <a href="#lighting"><span class="chip" style="background:var(--z)"></span>光と質感</a>
+    <a href="#styles"><span class="chip" style="background:var(--l)"></span>3つの見た目</a>
+    <a href="#effects"><span class="chip" style="background:var(--s)"></span>ラインクリアの演出</a>
+    <a href="#hudsound"><span class="chip" style="background:var(--i)"></span>表示と音</a>
+    <a href="#themes"><span class="chip" style="background:var(--z)"></span>3つの設計テーマ</a>
+    <a href="#files"><span class="chip" style="background:var(--stage)"></span>ファイル一覧</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="intro">
+  <p class="ch">第1章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F0AEBF"/><polygon points="3,29 50,56 50,112 3,85" fill="#DB7D96"/><polygon points="97,29 50,56 50,112 97,85" fill="#B25A73"/></g></svg>このデモとは</h2>
+  <p class="lede">「テトリスを“本物のブロック”みたいにツヤツヤに描くと、どうなるの？」に、動くコードで答えてくれるサンプルです。</p>
+  <p>このデモは、Babylon.js ファミリーの WebGPU 専用ランタイム <b>Babylon Lite</b> の公式リポジトリに含まれる、<b>3D テトリス</b>です。ルールはおなじみのテトリスそのものですが、盤面のブロックは平べったい四角ではなく、角に丸みや面取りのついた立体キューブ。写真のような環境の映り込み（HDR）と、ツヤを強調するライティングで、まるでプラスチックの玩具のように光ります。ブロックの見た目は<b>3スタイル</b>を切り替えられ、そのうち1つはかわいい動物「キューブペット」です。</p>
+  <p>プログラムとしての見どころは、次の3点です。</p>
+  <div class="grid3">
+    <div class="term"><b>🧊 キューブはコードで成形</b><p>ただの立方体では“開発中の仮モデル”に見えてしまう。角を丸めたり（フィレット）面取りしたり（ベベル）するメッシュを、コードで生成しています。</p></div>
+    <div class="term"><b>💡 本格的な3D描画</b><p>PBR 質感＋HDR 環境光の映り込み＋ACES トーンマッピング。さらに解像度を上げて描いて縮小する“超サンプリング”で、輪郭をなめらかに。</p></div>
+    <div class="term"><b>⚡ 一気に描くしくみ</b><p>ブロックを1個ずつ描かず、色ごとにまとめて GPU へ。盤面が埋まっても描画命令はほぼ一定。thin instancing の教科書です。</p></div>
+  </div>
+</section>
+
+<section id="play">
+  <p class="ch">第2章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#FFDD8F"/><polygon points="3,29 50,56 50,112 3,85" fill="#E0A93A"/><polygon points="97,29 50,56 50,112 97,85" fill="#B2831F"/></g></svg>あそびかた</h2>
+  <p class="lede">コードを読む前に、まず遊んでみるのがいちばんの近道です。操作はふつうのテトリスと同じです。</p>
+  <div class="callout"><b>🎮 ブラウザで遊ぶ</b><p><a href="https://babylonjs.com/lite-demos/demo-tetris.html" target="_blank" rel="noopener">babylonjs.com のライブデモを開く →</a>（WebGPU 対応ブラウザが必要です）</p></div>
+  <table>
+    <tr><th style="width:42%">操作</th><th>すること</th></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>左右に移動（押しっぱなしで連続移動。後述の DAS）</td></tr>
+    <tr><td><kbd>↑</kbd> / <kbd>X</kbd></td><td>回転</td></tr>
+    <tr><td><kbd>↓</kbd></td><td>ソフトドロップ（少し速く落とす／1マスにつき +1点）</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>ハードドロップ（一気に着地／落ちたマス ×2点）</td></tr>
+    <tr><td><kbd>P</kbd></td><td>ポーズ</td></tr>
+    <tr><td>画面のボタン</td><td>見た目スタイル（Pets／Arcade／Smooth）とミュートの切り替え</td></tr>
+  </table>
+  <div class="callout slate"><b>💡 このテトリスの流儀</b><p>いわゆる公式ガイドライン（SRS 回転・ホールド・壁蹴り・ロック遅延）は<b>あえて入れていません</b>。回転は4状態を素直に切り替えるだけ、着地したら即固定。「小さく・依存なしで・読んで分かる」ことを優先した、潔い実装です。</p></div>
+</section>
+
+<section id="glossary">
+  <p class="ch">第3章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#8B8B9E"/><polygon points="3,29 50,56 50,112 3,85" fill="#62627A"/><polygon points="97,29 50,56 50,112 97,85" fill="#45455A"/></g></svg>用語ミニ辞典</h2>
+  <p class="lede">この先の章で出てくることばを先にまとめて紹介します。分からなくなったらここに戻ってきてください。</p>
+  <div class="grid2">
+    <div class="term"><b>テトリミノ</b><p>4つのマスでできたブロックのこと。I・O・T・S・Z・J・L の7種類があります。</p></div>
+    <div class="term"><b>7-bag（7種袋）</b><p>次に出るブロックの決め方。7種を1つずつ袋に入れて引くので、7回に1回は必ず全種が出る＝極端な偏りが起きません。</p></div>
+    <div class="term"><b>DAS（遅延付き自動連射）</b><p>左右キーを押しっぱなしにしたとき、最初だけ少し待ってから連続移動が始まるしくみ。押した瞬間に暴走しないための定番です。</p></div>
+    <div class="term"><b>ゴーストピース</b><p>いま操作中のブロックが「このまま落ちるとどこに着地するか」を、半透明で先に見せる影のこと。</p></div>
+    <div class="term"><b>ソフト／ハードドロップ</b><p>ソフト＝少し速く落とす、ハード＝一気に着地させる。どちらもボーナス点がつきます。</p></div>
+    <div class="term"><b>PBR（物理ベースレンダリング）</b><p>金属・プラスチックなど素材の反射を物理法則にならって計算する描き方。ザラつき（ラフネス）を変えるとツヤ感が変わります。</p></div>
+    <div class="term"><b>IBL / HDR 環境光</b><p>周囲360°の明るい風景（HDR画像）を光源として使い、ブロック表面にうっすら風景を映り込ませる手法。写真のような立体感が出ます。</p></div>
+    <div class="term"><b>トーンマッピング（ACES）</b><p>まぶしすぎる明るさを、目になじむ範囲へ上手に圧縮する変換。映画でも使われる ACES 方式を採用しています。</p></div>
+    <div class="term"><b>thin instancing（シンインスタンシング）</b><p>同じ形のメッシュを、位置だけ変えて何百個も一括描画する GPU の機能。1個ずつ描くよりずっと高速です。</p></div>
+    <div class="term"><b>ベベル／フィレット</b><p>ベベル＝角を平らに削る「面取り」、フィレット＝角を丸める「丸め」。どちらも輪郭にツヤの線を走らせ、実物らしさを出します。</p></div>
+    <div class="term"><b>スーパーサンプリング</b><p>実際より高い解像度で描いてから縮小し、輪郭のギザギザを消す方法。このデモは解像度を2倍にして使います。</p></div>
+    <div class="term"><b>ブルーム</b><p>明るい部分がふわっとにじんで光って見える後処理。発光（エミッシブ）と組み合わせてブロックに光の暈（かさ）を足します。</p></div>
+  </div>
+</section>
+
+<section id="arch">
+  <p class="ch">第4章</p>
+  <h2><svg viewBox="0 0 100 100" width="26" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="8" fill="#1B1A23" stroke="#0F0E14" stroke-width="4"/><g stroke="#E0A93A" stroke-width="5" stroke-linecap="round"><line x1="26" y1="34" x2="74" y2="34"/><line x1="26" y1="52" x2="74" y2="52"/><line x1="26" y1="70" x2="58" y2="70"/></g></svg>全体の地図</h2>
+  <p class="lede">エントリの <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris.ts" target="_blank" rel="noopener"><code class="inline">tetris.ts</code></a> は、エンジンとシーン・HDR 環境光・入力を用意して、あとは4つの部品に仕事を渡します。実装のほとんどは 3D 描画担当の <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a> に集まっています。</p>
+  <pre class="mermaid">
+flowchart TD
+    ENTRY["tetris.ts<br/>エンジン・シーン・HDR環境光・入力"]
+    subgraph CORE["ゲームと表示"]
+        direction LR
+        GAME["game<br/>ルールと盤面（10×20）"]
+        REND["renderer<br/>3D描画（最大の部品）"]
+        HUD["hud<br/>スコア等のDOM表示"]
+        SND["sound<br/>効果音の合成"]
+    end
+    subgraph DATA["形と素材"]
+        direction LR
+        PIECE["pieces<br/>7種の形と色"]
+        ROUND["rounded-box<br/>丸めキューブ"]
+        CHAM["chamfered-box<br/>面取りキューブ"]
+        PART["particles<br/>破片エフェクト"]
+    end
+    ENTRY --> CORE
+    REND --> DATA
+    GAME --> PIECE
+  </pre>
+  <p>矢印は「上が下を利用する」向きです。ルール（<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/game.ts" target="_blank" rel="noopener"><code class="inline">game.ts</code></a>）は「どのマスに何色のブロックがあるか」という数字だけを扱い、見た目は一切知りません。その数字を受け取って、丸みや面取りのキューブ・光・映り込み・破片へと“翻訳”するのが <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a> の仕事です。<b>ルールと見た目がきれいに分かれている</b>のが、このデモを読むときの最初の目印になります。</p>
+  <div class="callout green"><b>🔍 読みはじめるなら</b><p>おすすめは、①<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/pieces.ts" target="_blank" rel="noopener"><code class="inline">pieces.ts</code></a>（7種の形）→ ②<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/game.ts" target="_blank" rel="noopener"><code class="inline">game.ts</code></a>（ルール）→ ③<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/rounded-box.ts" target="_blank" rel="noopener"><code class="inline">rounded-box.ts</code></a>（キューブの成形）→ ④<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a>。小さな部品から読むと、巨大なレンダラが「知ってる部品の組み立て」に見えてきます。</p></div>
+</section>
+
+<section id="boot">
+  <p class="ch">第5章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#FFDD8F"/><polygon points="3,29 50,56 50,112 3,85" fill="#E0A93A"/><polygon points="97,29 50,56 50,112 97,85" fill="#B2831F"/></g></svg>起動の流れ</h2>
+  <p class="lede">ページを開いてから盤面が現れるまで、<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris.ts" target="_blank" rel="noopener"><code class="inline">tetris.ts</code></a> は次の順で準備を進めます。</p>
+  <pre class="mermaid">
+flowchart TD
+    A["① canvas 取得・読み込み進捗（約1MB）"] --> B["② エンジンとシーンを用意"]
+    B --> C["③ HDR 環境を読み込み<br/>IBL の光源に。ACES トーンマッピングを適用"]
+    C --> D["④ 解像度を2倍(=4倍密度)に設定<br/>既定の4×MSAAと合わせて実質≒16×アンチエイリアス"]
+    D --> E["⑤ game・renderer・hud・sound を生成"]
+    E --> F["⑥ 入力（DAS付き）を接続してループ開始"]
+  </pre>
+  <p>ポイントは④です。画面のドット密度（DPR）を<b>わざと2倍に偽装</b>して、実際の4倍の細かさで描き、最後に縮小します。これに描画側の 4×MSAA が乗るので、合わせて<b>実質およそ16倍のアンチエイリアス</b>。ツヤのあるキューブの輪郭が、ジャギー（ギザギザ）なしでなめらかに見えるのはこのおかげです。ただし DPR の上書きを拒むブラウザもあるため、その操作は <code class="inline">try / catch</code> で包み、失敗しても止まらないようにしています。</p>
+  <div class="callout"><b>🌅 HDR 環境と BRDF ルックアップ</b><p>読み込む約1MBの中身は、映り込みに使う HDR 環境と、PBR の反射計算を速くするための BRDF ルックアップ表です。画像アセットはこれくらいで、ブロックやUIの絵は持っていません。</p></div>
+</section>
+
+<section id="rules">
+  <p class="ch">第6章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#71CFA0"/><polygon points="3,29 50,56 50,112 3,85" fill="#3DA172"/><polygon points="97,29 50,56 50,112 97,85" fill="#26744F"/></g></svg>盤面とルール</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/game.ts" target="_blank" rel="noopener"><code class="inline">game.ts</code></a>。盤面は横10×縦20マス。数字だけで状態を持ち、見た目には関与しません。</p>
+  <h3>落下スピードはレベルで速くなる</h3>
+  <p>1マス落ちるまでの時間は、レベルが上がるほど短くなります。式は <code class="inline">base = 1000 × 0.82^(level−1)</code>（ミリ秒）で、下限は 80ms。レベル1で約1秒、上げていくと最速 80ms までキビキビ落ちます。ラインを10消すごとにレベルが1上がります（<code class="inline">level = 1 + floor(消したライン数 / 10)</code>）。</p>
+  <table>
+    <tr><th>レベル</th><th>1マス落下の間隔（目安）</th></tr>
+    <tr><td class="num">1</td><td>1000 ms</td></tr>
+    <tr><td class="num">3</td><td>約 672 ms</td></tr>
+    <tr><td class="num">5</td><td>約 452 ms</td></tr>
+    <tr><td class="num">8</td><td>約 249 ms</td></tr>
+    <tr><td class="num">12</td><td>約 107 ms</td></tr>
+    <tr><td class="num">14+</td><td>80 ms（下限）</td></tr>
+  </table>
+  <h3>スコア</h3>
+  <table>
+    <tr><th>できごと</th><th>点数</th></tr>
+    <tr><td>1ライン消し</td><td>100 × レベル</td></tr>
+    <tr><td>2ライン消し</td><td>300 × レベル</td></tr>
+    <tr><td>3ライン消し</td><td>500 × レベル</td></tr>
+    <tr><td>4ライン消し（テトリス）</td><td>800 × レベル</td></tr>
+    <tr><td>ソフトドロップ</td><td>+1 ／ 1マス</td></tr>
+    <tr><td>ハードドロップ</td><td>+2 ／ 落ちた1マス</td></tr>
+  </table>
+  <p>ブロックは着地すると<b>すぐ固定</b>されます（ロック遅延なし）。固定した瞬間、横1列がすべて埋まっていれば消去。消える前にそのマスの色を控えておき（破片エフェクト用）、上の段を下へ詰めます。新しいブロックは <code class="inline">SPAWN_COL = 3</code> の位置・最上段に出現し、そこがすでに埋まっていればゲームオーバーです。</p>
+</section>
+
+<section id="pieces">
+  <p class="ch">第7章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F0AEBF"/><polygon points="3,29 50,56 50,112 3,85" fill="#DB7D96"/><polygon points="97,29 50,56 50,112 97,85" fill="#B25A73"/></g></svg>7つのテトリミノ</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/pieces.ts" target="_blank" rel="noopener"><code class="inline">pieces.ts</code></a>。7種類の形を、計算ではなく<b>手書きの座標表</b>で持っています。</p>
+  <p>各ピースは「4つの回転状態」を、それぞれ枠内のマス目 <code class="inline">[列, 行]</code> の並びとして直接書き下しています（I は 4×4、他は 3×3 や 2×2 の枠）。SRS のような回転計算を使わないのは、<b>「デモを小さく・依存なしで・目で追える」ことを優先したから</b>だとコメントに明記されています。壁蹴り（キック）も入れていません。</p>
+  <figure class="fig">
+  <svg viewBox="0 0 700 130" width="700" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="7種のテトリミノとその色" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12">
+    <g stroke="#fff" stroke-width="1.5">
+      <!-- I 縦4 pink -->
+      <g fill="#DB7D96"><rect x="20" y="18" width="20" height="20"/><rect x="20" y="38" width="20" height="20"/><rect x="20" y="58" width="20" height="20"/><rect x="20" y="78" width="20" height="20"/></g>
+      <!-- O 2x2 grey -->
+      <g fill="#B9B9C6"><rect x="110" y="48" width="20" height="20"/><rect x="130" y="48" width="20" height="20"/><rect x="110" y="68" width="20" height="20"/><rect x="130" y="68" width="20" height="20"/></g>
+      <!-- T tan -->
+      <g fill="#E58A5E"><rect x="200" y="48" width="20" height="20"/><rect x="220" y="48" width="20" height="20"/><rect x="240" y="48" width="20" height="20"/><rect x="220" y="68" width="20" height="20"/></g>
+      <!-- S red -->
+      <g fill="#C0463F"><rect x="320" y="48" width="20" height="20"/><rect x="340" y="48" width="20" height="20"/><rect x="300" y="68" width="20" height="20"/><rect x="320" y="68" width="20" height="20"/></g>
+      <!-- Z yellow -->
+      <g fill="#E0A93A"><rect x="410" y="48" width="20" height="20"/><rect x="430" y="48" width="20" height="20"/><rect x="430" y="68" width="20" height="20"/><rect x="450" y="68" width="20" height="20"/></g>
+      <!-- J slate -->
+      <g fill="#62627A"><rect x="520" y="48" width="20" height="20"/><rect x="520" y="68" width="20" height="20"/><rect x="540" y="68" width="20" height="20"/><rect x="560" y="68" width="20" height="20"/></g>
+      <!-- L green -->
+      <g fill="#3DA172"><rect x="660" y="48" width="20" height="20"/><rect x="620" y="68" width="20" height="20"/><rect x="640" y="68" width="20" height="20"/><rect x="660" y="68" width="20" height="20"/></g>
+    </g>
+    <g fill="#6A6676" font-size="12" text-anchor="middle">
+      <text x="30" y="112">I・ぶた</text>
+      <text x="130" y="112">O・パンダ</text>
+      <text x="220" y="112">T・うさぎ</text>
+      <text x="330" y="112">S・かに</text>
+      <text x="440" y="112">Z・ひよこ</text>
+      <text x="540" y="112">J・ねこ</text>
+      <text x="650" y="112">L・いもむし</text>
+    </g>
+  </svg>
+  <figcaption>7種の形と、このデモ特有の色。色はキューブペット（動物）に対応づけられている。O だけ回転しても形が変わらない。</figcaption>
+  </figure>
+  <table>
+    <tr><th>ピース</th><th>動物</th><th>色</th></tr>
+    <tr><td>I</td><td>ぶた</td><td>ピンク</td></tr>
+    <tr><td>O</td><td>パンダ</td><td>白グレー</td></tr>
+    <tr><td>T</td><td>うさぎ</td><td>タン（薄茶）</td></tr>
+    <tr><td>S</td><td>かに</td><td>レッド</td></tr>
+    <tr><td>Z</td><td>ひよこ</td><td>イエロー</td></tr>
+    <tr><td>J</td><td>ねこ</td><td>スレートブルー</td></tr>
+    <tr><td>L</td><td>いもむし</td><td>グリーン</td></tr>
+  </table>
+  <p>次に出るピースは <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/game.ts" target="_blank" rel="noopener"><code class="inline">game.ts</code></a> 側の <b>7-bag</b>（7種を袋に入れて引く方式）で決まるので、同じピースばかり続く・全然来ない、といった偏りが起きません。ホールド機能はありません。</p>
+</section>
+
+<section id="shaping">
+  <p class="ch">第8章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F0B48C"/><polygon points="3,29 50,56 50,112 3,85" fill="#E58A5E"/><polygon points="97,29 50,56 50,112 97,85" fill="#BE6740"/></g></svg>キューブを成形する</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/rounded-box.ts" target="_blank" rel="noopener"><code class="inline">rounded-box.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/chamfered-box.ts" target="_blank" rel="noopener"><code class="inline">chamfered-box.ts</code></a>。このデモが「ツヤの手ざわり」に最もこだわった部分です。</p>
+  <p>コメントいわく——<b>完璧な90°の立方体は「開発中の仮モデル」に見えてしまう</b>。現実の成形プラスチックの部品は、必ずどの辺にもわずかな丸みや面取りがあり、それが輪郭に沿ってツヤの筋（スペキュラハイライト）を一周させます。だから2種類のキューブを、頂点・法線・UVごとコードで生成しています。</p>
+  <figure class="fig">
+  <svg viewBox="0 0 640 220" width="640" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="ただの立方体・面取り・丸めの比較" font-family="'Zen Kaku Gothic New',sans-serif" font-size="12">
+    <!-- plain -->
+    <g stroke="#0F0E14" stroke-opacity=".2" stroke-width="1.5" stroke-linejoin="miter">
+      <polygon points="80,50 140,30 200,50 140,70" fill="#C9A6D6" opacity="0"/>
+    </g>
+    <g stroke="#0F0E14" stroke-opacity=".22" stroke-width="1.5">
+      <polygon points="90,60 140,42 190,60 140,78" fill="#E8DCE0"/>
+      <polygon points="90,60 140,78 140,150 90,132" fill="#C99BAB"/>
+      <polygon points="190,60 140,78 140,150 190,132" fill="#A87487"/>
+    </g>
+    <text x="140" y="186" fill="#6A6676" text-anchor="middle">ただの立方体</text>
+    <text x="140" y="204" fill="#9A94A6" text-anchor="middle" font-size="11">角が硬く“仮モデル”感</text>
+    <!-- chamfered -->
+    <g stroke="#0F0E14" stroke-opacity=".22" stroke-width="1.5" stroke-linejoin="round">
+      <polygon points="300,58 320,48 340,48 360,58 340,68 320,68" fill="#F0DEE4"/>
+      <polygon points="300,58 320,68 320,142 300,132" fill="#CE9FAF"/>
+      <polygon points="360,58 340,68 340,142 360,132" fill="#AA778A"/>
+      <polygon points="320,68 340,68 340,142 320,150" fill="#BE8A9B"/>
+    </g>
+    <text x="330" y="186" fill="#6A6676" text-anchor="middle">面取り（ベベル）</text>
+    <text x="330" y="204" fill="#9A94A6" text-anchor="middle" font-size="11">45°の平面でシャープなツヤ</text>
+    <!-- rounded -->
+    <g stroke="#0F0E14" stroke-opacity=".22" stroke-width="1.5" stroke-linejoin="round">
+      <path d="M470,60 Q470,52 480,52 L540,52 Q550,52 550,60 Q550,66 540,70 L480,70 Q470,66 470,60 Z" fill="#F2E1E7"/>
+      <path d="M470,60 Q470,66 480,70 L480,140 Q470,146 470,138 Z" fill="#CE9FAF"/>
+      <path d="M550,60 Q550,66 540,70 L540,140 Q550,146 550,138 Z" fill="#AA778A"/>
+      <path d="M480,70 L540,70 L540,140 Q510,152 480,140 Z" fill="#C08BA0"/>
+    </g>
+    <ellipse cx="500" cy="60" rx="18" ry="4" fill="#fff" opacity=".5"/>
+    <text x="510" y="186" fill="#6A6676" text-anchor="middle">丸め（フィレット）</text>
+    <text x="510" y="204" fill="#9A94A6" text-anchor="middle" font-size="11">柔らかいツヤが一周する</text>
+  </svg>
+  <figcaption>同じ立方体でも、角の処理でツヤの出方がまるで違う。面取り＝キリッと、丸め＝やわらか。どちらも「実物っぽさ」の決め手。</figcaption>
+  </figure>
+  <div class="grid2">
+    <div class="term"><b>丸めキューブ（rounded-box）</b><p>6枚の面＋12本の辺を1/4円柱で＋8つの角を球の1/8で埋める。分割数 seg=3 で約250頂点。柔らかく光が回る“成形プラスチック”の質感に。</p></div>
+    <div class="term"><b>面取りキューブ（chamfered-box）</b><p>すべての辺と角を45°でカット。96頂点・132インデックスと軽量で、フラットシェーディング。輪郭にシャープなツヤの筋が出る“アーケード”な質感に。</p></div>
+  </div>
+  <p>どちらも1個あたりの頂点数を抑えてあるので、後述の thin instancing で盤面いっぱい（最大およそ204個）に並べても軽快です。</p>
+</section>
+
+<section id="instancing">
+  <p class="ch">第9章</p>
+  <h2><svg viewBox="0 0 100 100" width="26" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="8" fill="#1B1A23" stroke="#0F0E14" stroke-width="4"/><g fill="#E0A93A"><rect x="24" y="24" width="16" height="16" rx="3"/><rect x="44" y="24" width="16" height="16" rx="3"/><rect x="64" y="24" width="16" height="16" rx="3"/><rect x="24" y="44" width="16" height="16" rx="3"/><rect x="44" y="44" width="16" height="16" rx="3"/><rect x="24" y="64" width="16" height="16" rx="3"/></g></svg>一気に描くしくみ</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a>（692行・最大のファイル）。3D テトリスの心臓部で、ブロックを“1個ずつ”描かない工夫の塊です。</p>
+  <p>盤面には最大200個のブロック＋操作中4個＋ゴースト4個が並びます。これを素直にメッシュ200個で描くと重い。そこで<b>色ごとに「1つのメッシュ」を用意し、位置だけ違うコピーを大量に生やす</b> thin instancing を使います。7色ぶん＋ゴースト用の型があり、毎フレーム盤面を見て「どの色をどこに何個置くか」の行列表だけを更新します。</p>
+  <pre class="code"><span class="cm">// 色ごとに固定枠を確保。使わない枠は「つぶれた行列(スケール0)」で不可視に</span>
+MAX_INSTANCES = BOARD_COLS * BOARD_ROWS + 4   <span class="cm">// 10*20 + 4</span>
+<span class="cm">// 描画命令は一度だけ記録して使い回す:</span>
+<span class="kw">drawIndexed</span>(_, MAX)   <span class="cm">// バンドルに1回焼き、以後は記録し直さない</span>
+<span class="cm">// 中身（行列）は毎フレーム GPU へ直接転送:</span>
+device.queue.<span class="kw">writeBuffer</span>(...)</pre>
+  <p>使わない枠は<b>スケール0の「つぶれた行列」</b>を入れておくと、GPU 側では“見えないゴミ”として無視されます。だから盤面が空でも満杯でも、記録する描画命令はいつも同じ1回ぶんだけ。命令を毎フレーム作り直さず、中身の数字（行列）だけを流し込むので、CPU の負担がとても軽いのです。盤面を囲う石枠も同じ発想で、丸めキューブを<b>66個</b>リング状に並べて作っています（左右の列はZ軸まわりに90°回して、丸い辺が外を向くように）。</p>
+  <div class="callout slate"><b>🧮 インスタンス数はつねに一定枠</b><p>盤面200＋操作中4＋ゴースト4。上限を <code class="inline">MAX_INSTANCES</code> で固定してあるので、描画のコストが「今どれだけ積まれているか」に左右されません。ゲームが白熱しても処理が重くならない、予測しやすい設計です。</p></div>
+</section>
+
+<section id="lighting">
+  <p class="ch">第10章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#FFDD8F"/><polygon points="3,29 50,56 50,112 3,85" fill="#E0A93A"/><polygon points="97,29 50,56 50,112 97,85" fill="#B2831F"/></g></svg>光と質感</h2>
+  <p class="lede">ブロックが“玩具のプラスチック”に見えるのは、質感（PBR）と光の合わせ技です。担当は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a> の中。</p>
+  <p>基本は <b>PBR</b>。表面のザラつき＝ラフネスを小さく（約0.22）すると、キリッとしたツヤの点が出ます。さらに各ブロックは自分の色をほんの少し（約35%）自分から発光させ、後処理のブルームで光の暈（かさ）をまといます。映り込みには <b>HDR 環境（IBL）</b>を使い、視線方向に沿って環境を「ラフネスの分だけぼかして」サンプリング。背景も同じ環境をぼかして敷くので、写真スタジオのようなやわらかい奥行きが出ます。</p>
+  <table>
+    <tr><th>光・素材</th><th>設定のねらい</th></tr>
+    <tr><td>ディレクショナル（主光源）</td><td>カメラの少し後ろ上に置き、ツヤがまっすぐ手前へ跳ね返るように</td></tr>
+    <tr><td>ヘミスフェリック（環境光）</td><td>上方向 [0,1,0.25]・強さ0.75。床面のもち上げ（暗く沈ませない）</td></tr>
+    <tr><td>背面パネル</td><td>ほぼ黒（0.018,0.02,0.028）・中低ラフネス0.42。ブロックを背景から浮かせる</td></tr>
+    <tr><td>光沢ブロック（Arcade/Smooth）</td><td>低ラフネス0.22でシャープなツヤ＋発光35%</td></tr>
+    <tr><td>Pets ブロック</td><td>マットな玩具肌（ラフネス0.62）＋強め直射3.0。暗い動物色を暗い舞台で沈ませない</td></tr>
+    <tr><td>ゴースト</td><td>半透明（アルファ0.3）のグレー。着地位置のプレビュー</td></tr>
+  </table>
+  <p>カメラは弧を描いて回るアークローテート式で、行き過ぎないよう範囲を制限しています（半径24〜42、上下は π×0.32〜0.62、左右は正面 π/2 から±0.45 ラジアン）。真上・真後ろに回り込めないので、ツヤが最も映える角度から大きく外れません。</p>
+</section>
+
+<section id="styles">
+  <p class="ch">第11章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#71CFA0"/><polygon points="3,29 50,56 50,112 3,85" fill="#3DA172"/><polygon points="97,29 50,56 50,112 97,85" fill="#26744F"/></g></svg>3つの見た目</h2>
+  <p class="lede">画面のボタンひとつで、ブロックの見た目を3スタイル切り替えられます。使うキューブのメッシュと質感が入れ替わります。</p>
+  <div class="grid3">
+    <div class="term"><b>🐾 Pets</b><p>Kenney の CC0 素材「Cube Pets」の動物キューブ。頂点色をあらかじめ焼き込んであり、7色が7匹の動物に対応。マットな玩具肌。</p></div>
+    <div class="term"><b>🕹️ Arcade</b><p>45°の面取りキューブ。シャープなツヤの筋が輪郭に走る、キリッとしたゲームセンター風。</p></div>
+    <div class="term"><b>🫧 Smooth</b><p>たっぷり丸めたキューブ。やわらかいツヤが一周する、上品でなめらかな質感。</p></div>
+  </div>
+  <p>どのスタイルでも、盤面の数字（どこに何色）と描画のしくみ（色ごとのインスタンシング）は共通です。差し替わるのは<b>キューブの形と表面の質感だけ</b>。データと見た目を分けておいた設計が、こういう切り替えを簡単にしています。</p>
+</section>
+
+<section id="effects">
+  <p class="ch">第12章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#D96B64"/><polygon points="3,29 50,56 50,112 3,85" fill="#C0463F"/><polygon points="97,29 50,56 50,112 97,85" fill="#97312B"/></g></svg>ラインクリアの演出</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/particles.ts" target="_blank" rel="noopener"><code class="inline">particles.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a> のカメラシェイク。ラインが消える瞬間の“気持ちよさ”を作ります。</p>
+  <p>横1列が消えると、そのマスたちが<b>元の色のまま小さなキューブになって砕け散り</b>ます。粒は盤面のほんの手前（z=0.46）から湧いて、こちらへ飛んできます。重力22で落ち、上向き初速3〜7・手前向き2.5〜6.5・軸まわりの回転±9でくるくる回転。寿命0.85〜1.4秒のあいだに、大きさが<code class="inline">t²</code>でスッと小さく消えます。粒はすべて1枚の「陰影なし・頂点色」シェーダ（明るさ2.4）で描かれ、負荷を抑えています。</p>
+  <div class="callout"><b>📷 カメラシェイク＝消したライン数ぶんの手ごたえ</b><p>ラインを消すたびにカメラが小さく揺れます。揺れは<b>周波数の違う2つの正弦波（38Hz と 31Hz）</b>を直交方向に重ねて、機械的でない自然なブレに。揺れ幅は消したライン数に比例し、4ライン同時消し（テトリス）がいちばん大きな“ドン”になります。</p></div>
+</section>
+
+<section id="hudsound">
+  <p class="ch">第13章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F0AEBF"/><polygon points="3,29 50,56 50,112 3,85" fill="#DB7D96"/><polygon points="97,29 50,56 50,112 97,85" fill="#B25A73"/></g></svg>表示と音</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/hud.ts" target="_blank" rel="noopener"><code class="inline">hud.ts</code></a>（画面表示）と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/sound.ts" target="_blank" rel="noopener"><code class="inline">sound.ts</code></a>（音）。どちらも「3D の描画を汚さない」ための外付け担当です。</p>
+  <h3>HUD は全部ふつうの HTML</h3>
+  <p>スコア・ライン・レベル、次のピースの4×4プレビュー、操作ヘルプ、スタイル/ミュートの切り替えボタン——これらは canvas の上に重ねた<b>ただの DOM</b>です。3D の盤面に文字を描かせずに済むうえ、すりガラス風（<code class="inline">backdrop-filter: blur(8px)</code>）の見た目も CSS だけで作れます。ゲームオーバーとポーズの半透明オーバーレイもここが出します。</p>
+  <h3>音は1つ残らず合成</h3>
+  <p>効果音は音声ファイルを持たず、WebAudio のオシレータとエンベロープで<b>その場で合成</b>します。移動・回転・ソフト/ハードドロップ・固定・ライン消し・テトリス・レベルアップ・ゲームオーバー・ポーズ——それぞれが短い「発振音の重ね（チップチューン風のピコッ・シュン・アルペジオ）」。プツッというノイズが出ないよう、音量を指数カーブでなめらかに立ち上げ・下げしています。AudioContext はブラウザの自動再生規制に合わせ、<b>最初のキー操作の瞬間に初めて</b>作られます。BGM はありません。</p>
+</section>
+
+<section id="themes">
+  <p class="ch">第14章</p>
+  <h2><svg viewBox="0 0 100 116" width="26" aria-hidden="true"><g stroke="#0F0E14" stroke-opacity=".25" stroke-width="3" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#FFDD8F"/><polygon points="3,29 50,56 50,112 3,85" fill="#E0A93A"/><polygon points="97,29 50,56 50,112 97,85" fill="#B2831F"/></g></svg>3つの設計テーマ</h2>
+  <p class="lede">約2,600行を貫くのは、この3つの考え方です。自分のプロジェクトにもそのまま持ち帰れます。</p>
+  <div class="grid3">
+    <div class="term"><b>📦 小さく・依存なし</b><p>回転は SRS を使わず4状態の座標表、乱数は7-bag、音も画像も外部素材に頼らない。読めば全部わかる“監査しやすさ”を優先。</p></div>
+    <div class="term"><b>⚡ GPUにやさしい</b><p>色ごとに1メッシュのインスタンシング、描画命令は1回だけ記録、行列は毎フレーム直接転送。命令数を状況に左右させない。</p></div>
+    <div class="term"><b>🧊 実物らしい手ざわり</b><p>ただの立方体を避け、丸め・面取りで輪郭にツヤを走らせる。PBR＋HDR＋約16×AA＋ブルームで“成形プラスチック”に。</p></div>
+  </div>
+  <div class="callout"><b>📝 コメントは「理由の記録」</b><p>このコードのコメントには「なぜそうしたか」がていねいに書かれています。<i>完璧な立方体は仮モデルに見える／SRS を入れないのは小さく保つため／未使用枠はスケール0で不可視に</i>——判断の理由ごと読めるのが、このサンプルの教材価値です。Minecraft・Platformer デモと共通する“コメント文化”が、ここにも息づいています。</p></div>
+</section>
+
+<section id="files">
+  <p class="ch">第15章</p>
+  <h2><svg viewBox="0 0 100 100" width="26" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="8" fill="#1B1A23" stroke="#0F0E14" stroke-width="4"/><g stroke="#E0A93A" stroke-width="5" stroke-linecap="round"><line x1="26" y1="32" x2="74" y2="32"/><line x1="26" y1="50" x2="74" y2="50"/><line x1="26" y1="68" x2="60" y2="68"/></g></svg>ファイル一覧（全9ファイル）</h2>
+  <p class="lede">コードリーディングのおともに。行数は <code class="inline">master</code> ブランチのソース実測値です。<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a> が全体の約4分の1を占めます。</p>
+  <table>
+    <tr><th>ファイル</th><th style="width:14%">行数</th><th>やくわり</th></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--stage); color:#ECE7F3">エントリ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris.ts" target="_blank" rel="noopener"><code class="inline">tetris.ts</code></a></td><td class="num">267</td><td>エンジン・シーン・HDR環境・約16×AA・入力(DAS)を用意して各部品へ委譲</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--l-bg)">ゲームロジック層</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/game.ts" target="_blank" rel="noopener"><code class="inline">game.ts</code></a></td><td class="num">380</td><td>ルールと盤面(10×20)。落下・回転・ライン消去・スコア・7-bag・ゲームオーバー</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/pieces.ts" target="_blank" rel="noopener"><code class="inline">pieces.ts</code></a></td><td class="num">228</td><td>7種テトリミノの形（4回転ぶんの座標表）と色・動物の対応</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--i-bg)">描画・形状層</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/renderer.ts" target="_blank" rel="noopener"><code class="inline">renderer.ts</code></a></td><td class="num">692</td><td>3D描画の心臓部。インスタンシング・PBR・IBL・ライト・カメラ・石枠・シェイク</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/rounded-box.ts" target="_blank" rel="noopener"><code class="inline">rounded-box.ts</code></a></td><td class="num">179</td><td>丸めキューブのメッシュを生成（面＋辺の1/4円柱＋角の球1/8）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/chamfered-box.ts" target="_blank" rel="noopener"><code class="inline">chamfered-box.ts</code></a></td><td class="num">137</td><td>面取りキューブのメッシュを生成（45°ベベル・96頂点）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/particles.ts" target="_blank" rel="noopener"><code class="inline">particles.ts</code></a></td><td class="num">205</td><td>ライン消去時に飛び散る小キューブの破片エフェクト</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--z-bg)">UI・音層</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/hud.ts" target="_blank" rel="noopener"><code class="inline">hud.ts</code></a></td><td class="num">299</td><td>スコア・次ピース・操作ヘルプ・切替ボタン・各オーバーレイ（すべてDOM）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris/sound.ts" target="_blank" rel="noopener"><code class="inline">sound.ts</code></a></td><td class="num">186</td><td>効果音をWebAudioで合成（移動・回転・固定・ライン消し・テトリス等）</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--ink-soft)">行数は <code class="inline">master</code> ブランチ（2026年時点）のソース実測値です。合計およそ2,573行。</p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="inner">
+    <p>ソースコード：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/tetris.ts" target="_blank" rel="noopener">BabylonJS/Babylon-Lite — lab/lite/src/demos/tetris.ts</a>（コンポーネント群は同階層の <a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/tetris" target="_blank" rel="noopener">tetris/</a> フォルダ）</p>
+    <p>ブロックの動物素材：<a href="https://kenney.nl/" target="_blank" rel="noopener">Kenney</a> の Cube Pets（CC0 / パブリックドメイン）。映り込みには HDR 環境と BRDF ルックアップ表を使用しています。本ページの図は mermaid.js とインラインSVGで描画しています。</p>
+    <p>解説対象のソースコード（Babylon-Lite）は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/LICENSE" target="_blank" rel="noopener">Apache License 2.0</a> で公開されています。本ページで引用しているコード断片・数値の著作権はそれぞれの著作者に帰属します。図の描画に使用している <a href="https://mermaid.js.org/" target="_blank" rel="noopener">mermaid.js</a>（MIT License）と Web フォント（SIL Open Font License）は CDN から参照しています。</p>
+    <p>テトリス（Tetris）は The Tetris Company の商標です。本ページおよび解説対象のデモは同社とは無関係の、独立した教育目的のコンテンツです。</p>
+  </div>
+</footer>
+
+<script type="module">
+try {
+  const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11.16.0/+esm');
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    securityLevel: 'loose',
+    fontFamily: "'Zen Kaku Gothic New', sans-serif",
+    flowchart: { htmlLabels: true, curve: 'linear', nodeSpacing: 34, rankSpacing: 42 },
+    themeVariables: {
+      fontSize: '13.5px',
+      primaryColor: '#ECECF2',
+      primaryTextColor: '#23212B',
+      primaryBorderColor: '#62627A',
+      lineColor: '#8C8C9C',
+      secondaryColor: '#FBF1D8',
+      tertiaryColor: '#E5F3EC',
+      clusterBkg: '#F7F6FA',
+      clusterBorder: '#CFCBDA',
+      edgeLabelBackground: '#F1F0F5',
+      titleColor: '#23212B'
+    }
+  });
+  // Web フォント（Zen Kaku Gothic New 等）の読み込みを待ってから測定・描画する。
+  // 待たないとフォールバックフォントの幅でノードが確定し、本フォント差し替え後に
+  // 日本語テキストがノード枠からはみ出して切れてしまう。
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) {}
+  }
+  await mermaid.run({ querySelector: 'pre.mermaid' });
+} catch (e) {
+  console.error('mermaid の読み込みに失敗しました（オフラインの可能性）:', e);
+}
+</script>
+</body>
+</html>
