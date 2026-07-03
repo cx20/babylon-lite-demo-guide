@@ -1,0 +1,9 @@
+# テキストは自動判定・改行は LF に正規化（作業ツリー側は各環境の設定を尊重）
+* text=auto eol=lf
+
+# バイナリ扱い（改行変換しない）
+*.svg   text eol=lf
+*.png   binary
+*.jpg   binary
+*.webp  binary
+*.ico   binary
