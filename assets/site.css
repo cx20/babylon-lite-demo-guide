@@ -1,0 +1,87 @@
+/* =====================================================================
+   Babylon Lite Demo Guide — 共通デザイントークン & 骨組み
+   ---------------------------------------------------------------------
+   ここには「全ページ共通の中立トークン」と「土台になる部品」だけを置く。
+   各デモ固有の配色（草/土/石/水 …）やレイアウトは、各ページ側の
+   <style> で --accent 系トークンを上書き or 追記して表現する。
+   ※現状は骨組み。共通部品は次のデモ解説を足すタイミングで拡充する。
+   ===================================================================== */
+
+:root {
+  /* ── 中立トークン（背景・文字・罫線） ── */
+  --bg: #F3F6EF;
+  --panel: #FFFFFF;
+  --ink: #263228;
+  --ink-soft: #5C6B5E;
+  --line: #DDE5D8;
+  --line-strong: #C6D1BF;
+  --sky: #D9EAF7;
+
+  /* ── アクセント（各ページで上書き可）。既定は草色 ── */
+  --accent: #57A045;
+  --accent-deep: #33702A;
+  --accent-bg: #EDF4EA;
+
+  /* ── フォント ── */
+  --font-display: 'DotGothic16', 'Zen Kaku Gothic New', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-code: 'M PLUS 1 Code', monospace;
+
+  /* ── 寸法 ── */
+  --wrap: 1060px;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.95;
+}
+a { color: var(--accent-deep); }
+a:focus-visible, button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+::selection { background: #CBE3BF; }
+
+/* ── 汎用の器 ── */
+.wrap { max-width: var(--wrap); margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 13px; letter-spacing: .22em;
+  color: var(--accent-deep); margin: 0 0 14px;
+}
+
+/* ── 共通ヒーロー（方眼＋空グラデ） ── */
+.hero {
+  background:
+    linear-gradient(rgba(38,50,40,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38,50,40,.045) 1px, transparent 1px),
+    linear-gradient(180deg, #E4F0FA 0%, var(--sky) 100%);
+  background-size: 18px 18px, 18px 18px, 100% 100%;
+  border-bottom: 2px solid var(--line-strong);
+  padding: 64px 24px 52px;
+}
+
+/* ── カード（汎用） ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
+
+/* ── フッター ── */
+footer { border-top: 2px solid var(--line-strong); margin-top: 30px; padding: 28px 24px 60px; }
+footer .inner { max-width: var(--wrap); margin: 0 auto; font-size: 13.5px; color: var(--ink-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

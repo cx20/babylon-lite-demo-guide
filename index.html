@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Lite デモ解説ガイド</title>
+<meta name="description" content="WebGPU 専用の軽量 3D エンジン「Babylon Lite」の公式デモを、初心者向けにやさしく分解して解説するガイド集。">
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+/* ── トップページ固有 ── */
+.hero-inner {
+  max-width: 1000px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(27px, 4.4vw, 42px);
+  line-height: 1.45; margin: 0 0 14px; letter-spacing: .01em;
+}
+.hero p.sub { margin: 0; max-width: 560px; color: var(--ink-soft); }
+
+.cubes { display: grid; grid-template-columns: repeat(2, 64px); gap: 20px 18px; }
+.cubes svg:nth-child(1) { animation: bob 5s ease-in-out infinite; }
+.cubes svg:nth-child(2) { animation: bob 5s ease-in-out .8s infinite; }
+.cubes svg:nth-child(3) { animation: bob 5s ease-in-out 1.6s infinite; }
+.cubes svg:nth-child(4) { animation: bob 5s ease-in-out 2.4s infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+.demos { max-width: var(--wrap); margin: 0 auto; padding: 54px 24px 40px; }
+.section-eyebrow { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 6px; }
+.section-title { font-family: var(--font-display); font-weight: 400; font-size: 22px; margin: 0 0 26px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+.demo-card {
+  display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+  text-decoration: none; color: inherit;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+a.demo-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(38,50,40,.10);
+  border-color: var(--line-strong);
+}
+.thumb {
+  aspect-ratio: 16 / 9; display: grid; place-items: center;
+  background:
+    linear-gradient(rgba(38,50,40,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38,50,40,.05) 1px, transparent 1px),
+    var(--thumb-bg, #EDF4EA);
+  background-size: 16px 16px, 16px 16px, 100% 100%;
+  border-bottom: 1px solid var(--line);
+}
+.demo-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.demo-title { font-family: var(--font-display); font-size: 17px; font-weight: 400; margin: 0; }
+.demo-desc { font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.8; flex: 1; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tag { font-family: var(--font-code); font-size: 11px; letter-spacing: .04em; color: var(--ink-soft); background: #EEF2EA; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+.badge { font-family: var(--font-display); font-size: 11px; letter-spacing: .1em; padding: 2px 10px; border-radius: 999px; align-self: flex-start; }
+.badge.ready { color: var(--accent-deep); background: var(--accent-bg); border: 1px solid var(--line-strong); }
+.badge.wip { color: #8A6D1E; background: #FBF3E2; border: 1px solid #E7D6A8; }
+
+.demo-card.soon { cursor: default; opacity: .82; }
+
+@media (max-width: 920px) {
+  .hero-inner { grid-template-columns: 1fr; }
+  .cubes { grid-template-columns: repeat(4, 48px); }
+  .card-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cubes svg { animation: none; }
+  a.demo-card:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow">BABYLON LITE を読みとく</p>
+      <h1>公式デモを、<br>1ブロックずつ分解する。</h1>
+      <p class="sub">WebGPU 専用の軽量 3D エンジン「Babylon Lite」の公式デモを、コードの内側から初心者向けにやさしく解説するガイド集です。地形生成・物理・ライティングのしくみを、図とコードで少しずつ読み解きます。</p>
+    </div>
+    <div class="cubes" aria-hidden="true">
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#6DBB57"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#A7B0B8"/><polygon points="3,29 50,56 50,112 3,85" fill="#78848F"/><polygon points="97,29 50,56 50,112 97,85" fill="#5E6973"/></g></svg>
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#7FB2E8"/><polygon points="3,29 50,56 50,112 3,85" fill="#3B7DC8"/><polygon points="97,29 50,56 50,112 97,85" fill="#2A62A6"/></g></svg>
+      <svg viewBox="0 0 100 116" width="64"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#F6C767"/><polygon points="3,29 50,56 50,112 3,85" fill="#E8A33D"/><polygon points="97,29 50,56 50,112 97,85" fill="#C9821F"/></g></svg>
+    </div>
+  </div>
+</header>
+
+<main class="demos">
+  <p class="section-eyebrow">デモ解説一覧</p>
+  <h2 class="section-title">読めるガイド</h2>
+
+  <div class="card-grid">
+
+    <!-- ── 公開中：Minecraft 風デモ ── -->
+    <a class="demo-card" href="minecraft/index.html" style="--thumb-bg:#EDF4EA">
+      <div class="thumb" aria-hidden="true">
+        <svg viewBox="0 0 100 116" width="72"><g stroke="#263228" stroke-opacity=".22" stroke-width="2" stroke-linejoin="round"><polygon points="50,2 97,29 50,56 3,29" fill="#6DBB57"/><polygon points="3,29 50,56 50,112 3,85" fill="#8A5A33"/><polygon points="97,29 50,56 50,112 97,85" fill="#6E4425"/></g></svg>
+      </div>
+      <div class="demo-body">
+        <span class="badge ready">公開中</span>
+        <h3 class="demo-title">ボクセルの世界のつくりかた</h3>
+        <p class="demo-desc">Minecraft 風サンドボックス。地形生成から水の流れ、昼夜の光まで、全 25 ファイルのしくみを分解します。</p>
+        <div class="tag-row"><span class="tag">地形生成</span><span class="tag">物理</span><span class="tag">ライティング</span></div>
+      </div>
+    </a>
+
+    <!-- ── 準備中：Gaussian Splats ── -->
+    <div class="demo-card soon" aria-disabled="true" style="--thumb-bg:#EFF1F3">
+      <div class="thumb" aria-hidden="true">
+        <svg width="72" height="60" viewBox="0 0 72 60"><g fill="#78848F" fill-opacity=".55"><circle cx="24" cy="30" r="15"/><circle cx="44" cy="22" r="11"/><circle cx="48" cy="40" r="9"/><circle cx="33" cy="44" r="7"/></g></svg>
+      </div>
+      <div class="demo-body">
+        <span class="badge wip">準備中</span>
+        <h3 class="demo-title">Gaussian Splats（仮）</h3>
+        <p class="demo-desc">点群を滑らかな立体として描く 3D Gaussian Splatting のデモ解説。近日追加予定です。</p>
+        <div class="tag-row"><span class="tag">点群</span><span class="tag">レンダリング</span></div>
+      </div>
+    </div>
+
+    <!-- ── 準備中：Treasure Waterfall ── -->
+    <div class="demo-card soon" aria-disabled="true" style="--thumb-bg:#EAF2FA">
+      <div class="thumb" aria-hidden="true">
+        <svg width="72" height="60" viewBox="0 0 72 60"><g stroke="#3B7DC8" stroke-width="4" stroke-linecap="round" fill="none" opacity=".6"><path d="M22 8 V52"/><path d="M36 6 V54"/><path d="M50 10 V50"/></g></svg>
+      </div>
+      <div class="demo-body">
+        <span class="badge wip">準備中</span>
+        <h3 class="demo-title">Treasure Waterfall（仮）</h3>
+        <p class="demo-desc">水流と光の演出を扱うデモの解説。近日追加予定です。</p>
+        <div class="tag-row"><span class="tag">流体</span><span class="tag">演出</span></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="inner">
+    <p>本サイトは <a href="https://github.com/BabylonJS" rel="noopener">Babylon Lite</a> の公式デモを題材にした非公式の解説ガイドです。解説コンテンツは <a href="https://creativecommons.org/licenses/by/4.0/deed.ja" rel="noopener">CC BY 4.0</a> で提供します。</p>
+  </div>
+</footer>
+
+</body>
+</html>
