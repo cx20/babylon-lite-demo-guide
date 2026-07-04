@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アイソメトリックの世界地図のつくりかた — Babylon Lite freeciv デモ解説</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F3ECDC;
+  --panel: #FFFDF7;
+  --ink: #31291B;
+  --ink-soft: #6E6250;
+  --line: #E4DAC5;
+  --line-strong: #CDBFA1;
+  --grass: #6BA836; --grass-deep: #4E8526; --grass-bg: #EAF1DA;
+  --ocean: #2F80B8; --ocean-deep: #1F4E77; --ocean-bg: #DFEAF3;
+  --desert: #C9A85F; --desert-deep: #9C8144; --desert-bg: #F5EDD6;
+  --sepia: #B07C33; --sepia-deep: #855A22; --sepia-bg: #F3E7CF;
+  --stone: #8C867A; --stone-deep: #635E54; --stone-bg: #ECE8DF;
+  --stage: #241C12;
+  --font-display: 'DotGothic16', 'Zen Kaku Gothic New', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-code: 'M PLUS 1 Code', monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.95;
+}
+a { color: var(--ocean-deep); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--sepia); outline-offset: 2px; border-radius: 4px; }
+::selection { background: #E7D6A8; }
+
+/* ── ヒーロー（古地図） ─────────── */
+.hero {
+  background:
+    radial-gradient(65% 60% at 12% 104%, rgba(47,128,184,.30), transparent 55%),
+    radial-gradient(58% 52% at 88% 4%, rgba(201,168,95,.42), transparent 56%),
+    linear-gradient(180deg, #EFE4CB 0%, #E7D8B9 58%, #DBC8A2 100%);
+  border-bottom: 3px solid #9C8144;
+  padding: 64px 24px 54px;
+  color: #3A2E1B;
+}
+.hero-inner {
+  max-width: 1000px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center;
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 13px; letter-spacing: .22em;
+  color: #8C5E1E; margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(25px, 4.2vw, 40px);
+  line-height: 1.5; margin: 0 0 14px; letter-spacing: .01em;
+  color: #29200F;
+}
+.hero p.sub { margin: 0; max-width: 560px; color: #4A3D26; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 34px; margin-top: 26px; font-family: var(--font-code); }
+.stat b { display: block; font-size: 24px; line-height: 1.3; font-weight: 700; color: #29200F; }
+.stat span { font-size: 12px; color: #6C5A38; letter-spacing: .06em; }
+.cubes { display: grid; grid-template-columns: repeat(2, 96px); gap: 6px 10px; }
+.cubes svg { filter: drop-shadow(0 7px 10px rgba(80,60,25,.32)); }
+.cubes svg:nth-child(1) { animation: bob 5s ease-in-out infinite; }
+.cubes svg:nth-child(2) { animation: bob 5s ease-in-out .8s infinite; }
+.cubes svg:nth-child(3) { animation: bob 5s ease-in-out 1.6s infinite; }
+.cubes svg:nth-child(4) { animation: bob 5s ease-in-out 2.4s infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+/* ── レイアウト ───────────────────────── */
+.layout {
+  max-width: 1060px; margin: 0 auto;
+  padding: 44px 24px 90px;
+  display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 46px;
+}
+nav.toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; }
+nav.toc .toc-title { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 10px 8px; }
+nav.toc a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 8px; border-radius: 6px;
+  color: var(--ink-soft); text-decoration: none; line-height: 1.5;
+}
+nav.toc a:hover { background: var(--panel); color: var(--ink); }
+.chip { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.18); }
+
+main { min-width: 0; }
+section { margin: 0 0 78px; scroll-margin-top: 26px; }
+.ch { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 6px; }
+h2 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: 25px; line-height: 1.4;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 10px;
+}
+h2 svg { flex: none; }
+h3 { font-size: 16.5px; margin: 34px 0 8px; }
+p { margin: 0 0 16px; }
+.lede { color: var(--ink-soft); margin-bottom: 22px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.term { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.term b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+.term p { font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.8; }
+
+.callout { border: 1px solid var(--line); border-left: 5px solid var(--sepia); background: var(--sepia-bg); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+.callout.ocean { border-left-color: var(--ocean); background: var(--ocean-bg); }
+.callout.grass { border-left-color: var(--grass); background: var(--grass-bg); }
+.callout.stone { border-left-color: var(--stone); background: var(--stone-bg); }
+.callout.desert { border-left-color: var(--desert-deep); background: var(--desert-bg); }
+.callout b { font-size: 14.5px; }
+.callout p { margin: 4px 0 0; font-size: 14px; }
+
+pre.mermaid {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 12px; margin: 20px 0;
+  display: flex; justify-content: center; overflow-x: auto;
+  font-family: var(--font-code); font-size: 13px; color: var(--ink-soft);
+}
+pre.code {
+  font-family: var(--font-code); font-size: 13px; line-height: 1.75;
+  background: var(--stage); color: #EDE3D2;
+  border-radius: 10px; padding: 18px 22px; overflow-x: auto; margin: 18px 0;
+}
+pre.code .cm { color: #9A8A70; }
+pre.code .kw { color: #E0B45A; }
+pre.code .st { color: #97C46A; }
+code.inline { font-family: var(--font-code); font-size: .88em; background: #E7DDC7; border-radius: 5px; padding: 1px 7px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 18px 0; }
+th { background: #EBE1CC; text-align: left; font-weight: 700; }
+th, td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.num { font-family: var(--font-code); text-align: right; white-space: nowrap; }
+tr.gh td { font-family: var(--font-display); font-size: 12.5px; letter-spacing: .12em; padding: 7px 14px; }
+kbd { font-family: var(--font-code); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line-strong); border-bottom-width: 3px; border-radius: 6px; padding: 1px 9px; white-space: nowrap; }
+
+footer { border-top: 3px solid var(--line-strong); margin-top: 30px; padding: 28px 24px 60px; }
+footer .inner { max-width: 1060px; margin: 0 auto; font-size: 13.5px; color: var(--ink-soft); }
+
+figure.fig { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 14px 12px; margin: 20px 0; }
+figure.fig figcaption { text-align: center; font-size: 13px; color: var(--ink-soft); margin-top: 10px; line-height: 1.75; padding: 0 12px; }
+
+.terrainrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0; }
+.tsw { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px 3px 6px; }
+.tsw i { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
+
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; gap: 26px; padding-top: 20px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 0; }
+  nav.toc .toc-title { display: none; }
+  nav.toc .links { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  nav.toc a { white-space: nowrap; }
+  .hero-inner { grid-template-columns: 1fr; }
+  .cubes { grid-template-columns: repeat(4, 72px); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cubes svg { animation: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow">BABYLON LITE 公式デモを読む</p>
+      <h1>斜め見下ろしの世界を、<br>タイル1枚から組み上げる。</h1>
+      <p class="sub">WebGPU 専用の軽量 3D エンジン「Babylon Lite」に付属する、Civ 風アイソメトリックの世界地図。じつは 3D を一切使わず<b>2Dスプライトだけ</b>で、本物の Freeciv タイルセットを読み込み、大陸を自動生成し、霧・昼夜・雲・水面まで描き込む——全 19 ファイルのしくみを初心者向けにやさしく解説します。</p>
+      <div class="stats">
+        <div class="stat"><b>19</b><span>ファイル</span></div>
+        <div class="stat"><b>約4,340</b><span>行のコード</span></div>
+        <div class="stat"><b>96×96</b><span>タイル</span></div>
+        <div class="stat"><b>15</b><span>描画レイヤー</span></div>
+      </div>
+    </div>
+    <div class="cubes" aria-hidden="true">
+      <!-- 草原 -->
+      <svg viewBox="0 0 96 84" width="96"><polygon points="4,34 48,58 48,70 4,46" fill="#4E8526"/><polygon points="92,34 48,58 48,70 92,46" fill="#3C6B1C"/><polygon points="48,10 92,34 48,58 4,34" fill="#6BA836"/></svg>
+      <!-- 海 -->
+      <svg viewBox="0 0 96 84" width="96"><polygon points="4,34 48,58 48,70 4,46" fill="#2C6698"/><polygon points="92,34 48,58 48,70 92,46" fill="#1F4E77"/><polygon points="48,10 92,34 48,58 4,34" fill="#3E86BE"/><g stroke="#A9D4EE" stroke-width="2" stroke-linecap="round" opacity=".8"><line x1="30" y1="30" x2="42" y2="36"/><line x1="52" y1="40" x2="66" y2="33"/><line x1="40" y1="46" x2="52" y2="52"/></g></svg>
+      <!-- 砂漠 -->
+      <svg viewBox="0 0 96 84" width="96"><polygon points="4,34 48,58 48,70 4,46" fill="#B0965A"/><polygon points="92,34 48,58 48,70 92,46" fill="#8C7644"/><polygon points="48,10 92,34 48,58 4,34" fill="#D2B979"/><g fill="#B89A56" opacity=".7"><circle cx="40" cy="32" r="2.4"/><circle cx="56" cy="38" r="2"/></g></svg>
+      <!-- 山 -->
+      <svg viewBox="0 0 96 84" width="96"><polygon points="4,34 48,58 48,70 4,46" fill="#78736A"/><polygon points="92,34 48,58 48,70 92,46" fill="#5C584F"/><polygon points="48,10 92,34 48,58 4,34" fill="#9A9488"/><polygon points="48,14 70,44 26,44" fill="#8A8478"/><polygon points="48,14 57,26 39,26" fill="#EDEAE2"/></svg>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">もくじ</p>
+  <div class="links">
+    <a href="#intro"><span class="chip" style="background:var(--grass)"></span>このデモとは</a>
+    <a href="#play"><span class="chip" style="background:var(--sepia)"></span>あそびかた</a>
+    <a href="#glossary"><span class="chip" style="background:var(--stone)"></span>用語ミニ辞典</a>
+    <a href="#arch"><span class="chip" style="background:var(--stage)"></span>全体の地図</a>
+    <a href="#tileset"><span class="chip" style="background:var(--sepia)"></span>タイルセットを読む</a>
+    <a href="#iso"><span class="chip" style="background:var(--ocean)"></span>斜め格子の座標</a>
+    <a href="#worldgen"><span class="chip" style="background:var(--grass)"></span>世界を生成する</a>
+    <a href="#tilemap"><span class="chip" style="background:var(--desert)"></span>レイヤーで描く</a>
+    <a href="#present"><span class="chip" style="background:var(--stone)"></span>なめらかズーム</a>
+    <a href="#live"><span class="chip" style="background:var(--grass)"></span>動くもの</a>
+    <a href="#interaction"><span class="chip" style="background:var(--sepia)"></span>クリックの手ごたえ</a>
+    <a href="#fog"><span class="chip" style="background:var(--stone)"></span>戦場の霧</a>
+    <a href="#daynight"><span class="chip" style="background:var(--ocean)"></span>昼と夜</a>
+    <a href="#sky"><span class="chip" style="background:var(--ocean)"></span>空・雲・水・きらめき</a>
+    <a href="#frame"><span class="chip" style="background:var(--sepia)"></span>古地図と縁取り</a>
+    <a href="#themes"><span class="chip" style="background:var(--grass)"></span>設計テーマ</a>
+    <a href="#files"><span class="chip" style="background:var(--stage)"></span>ファイル一覧</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="intro">
+  <p class="ch">第1章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--grass)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--grass-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#3C6B1C"/></svg>このデモとは</h2>
+  <p class="lede">「あの斜め見下ろしの Civ みたいな世界地図、3Dモデルなしで、絵（スプライト）を並べるだけで作れるの？」に、動く実装で答えるサンプルです。</p>
+  <p>このデモは、Babylon.js ファミリーの WebGPU 専用ランタイム <b>Babylon Lite</b> の公式リポジトリに含まれる、<b>freeciv</b>（フリーシブ）——オープンソースの Civ クローン「Freeciv」の見た目を借りた、<b>アイソメトリック（斜め見下ろし）の世界地図</b>です。本物の Freeciv タイルセット（<code class="inline">amplio2</code>）を読み込んで、ダイヤ形のタイルを何千枚も敷き詰め、大陸を自動生成し、都市・道・川・野生動物、そして霧・昼夜・雲・きらめく水面まで描き込みます。</p>
+  <div class="callout grass"><b>🖼️ 3Dを一切使わない</b><p>いちばんの驚きは、このデモが<b>シーンもカメラもメッシュもライトも作らない</b>こと。Babylon Lite の<b>2Dスプライト描画の経路だけ</b>で、この立体感あふれる世界を組み上げています。「奥行き」は3Dではなく、ダイヤ形タイルを正しい順で重ねることで生まれる“錯覚”です。</p></div>
+  <p>プログラムとしての見どころは、次の3点です。</p>
+  <div class="grid3">
+    <div class="term"><b>🗺️ 本物のタイルセット</b><p>Freeciv の <code class="inline">.spec</code> ファイル（タイル配置の設計図）を自前で解析し、1枚のPNGから何百ものタイル絵を切り出す。“データ考古学”の実践です。</p></div>
+    <div class="term"><b>🌍 大陸をその場生成</b><p>ノイズと緯度・湿度から、海・草原・砂漠・森・山・ツンドラを描き分け、川を流し、都市を置き、道でつなぐ。シード固定で毎回同じ世界に。</p></div>
+    <div class="term"><b>✨ 重ね塗りの演出</b><p>戦場の霧・昼夜・雲と影・水面のさざなみ・太陽のきらめき——すべて“世界に貼りついた1枚のシェーダ板”として、15レイヤーに重ねます。</p></div>
+  </div>
+</section>
+
+<section id="play">
+  <p class="ch">第2章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--sepia)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--sepia-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#63431A"/></svg>あそびかた</h2>
+  <p class="lede">コードを読む前に、まず地図をぐりぐり動かすのが近道です。マップ探索と、1体だけ動かせる斥候（スカウト）がいます。</p>
+  <div class="callout"><b>🎮 ブラウザで遊ぶ</b><p><a href="https://babylonjs.com/lite-demos/demo-freeciv.html" target="_blank" rel="noopener">babylonjs.com のライブデモを開く →</a>（WebGPU 対応ブラウザが必要です。初回はタイルセットの読み込みに少し時間がかかります）</p></div>
+  <table>
+    <tr><th style="width:42%">操作</th><th>すること</th></tr>
+    <tr><td>ドラッグ</td><td>地図をスクロール（パン）</td></tr>
+    <tr><td>マウスホイール</td><td>カーソル位置を中心にズーム（倍率 0.5〜8）</td></tr>
+    <tr><td>ホバー</td><td>タイルを水色の枠で強調＋地形名のツールチップ</td></tr>
+    <tr><td>斥候をクリック → タイルをクリック</td><td>斥候を選択し、経路探索で目的地まで移動</td></tr>
+    <tr><td><kbd>N</kbd></td><td>昼 ⇄ 夜 の切り替え（5秒かけてなめらかに）</td></tr>
+    <tr><td>ミニマップをクリック／ドラッグ</td><td>その場所へ表示を移動</td></tr>
+  </table>
+  <div class="callout ocean"><b>🏙️ 首都は「Babylon」</b><p>生成される世界の中心には、必ず首都 <b>Babylon</b>（人口5）が置かれます。「Babylon 5 へのオマージュ」というコメント付き。起動時のカメラは、この首都に寄って始まります。ほかにも Carthage・Paris・Kyoto が固定配置され、残りは自動で名付けられます。</p></div>
+</section>
+
+<section id="glossary">
+  <p class="ch">第3章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--stone)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--stone-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#4A463E"/></svg>用語ミニ辞典</h2>
+  <p class="lede">この先の章で出てくることばを先にまとめて紹介します。分からなくなったらここに戻ってきてください。</p>
+  <div class="grid2">
+    <div class="term"><b>アイソメトリック</b><p>斜め45°の見下ろし視点。正方形のマスを2:1のダイヤ形に描くことで、3Dなしに立体的な地形を表現します。</p></div>
+    <div class="term"><b>タイル</b><p>世界を敷き詰めるダイヤ形のマス1枚。このデモでは横96×縦48ピクセルの菱形で、96×96マスの世界を作ります。</p></div>
+    <div class="term"><b>スプライト / アトラス</b><p>スプライト＝1枚の絵、アトラス＝たくさんの絵を1枚に詰め込んだ画像とその切り出し表。GPUに優しい定番手法。</p></div>
+    <div class="term"><b>.spec / amplio2</b><p>.spec＝Freeciv の「どのタイル絵がシートのどこにあるか」を書いた設計図。amplio2＝その定番タイルセットの名前です。</p></div>
+    <div class="term"><b>ペインターズアルゴリズム</b><p>「奥のものから先に描く」画家の手法。アイソメトリックでは <code class="inline">x+y</code> の小さい順に描けば、手前が正しく上に重なります。</p></div>
+    <div class="term"><b>セル分割（CELL_CORNER）</b><p>海岸線などを、タイルを4つの角セルに割って隣接地形ごとに描き分ける Freeciv の技。境目をなめらかにつなぎます。</p></div>
+    <div class="term"><b>値ノイズ / fBm</b><p>乱数を滑らかに補間した“自然な凸凹”（値ノイズ）を、周波数を変えて重ねたもの（fBm）。地形・雲・霧の生成に使います。</p></div>
+    <div class="term"><b>戦場の霧</b><p>まだ見ていない土地を霞ませる演出。斥候や都市の視界の中だけが晴れます。1枚の連続したモヤとして描きます。</p></div>
+    <div class="term"><b>スーパーサンプリング</b><p>実際より高い解像度で描いてから縮小する手法。ダイヤの継ぎ目に隙間（クラック）が出ない、なめらかなズームの要です。</p></div>
+    <div class="term"><b>WGSL / シェーダ板</b><p>WGSL＝WebGPU のシェーダ言語。このデモは霧・雲・水などを「世界に貼った1枚の板＋自前シェーダ」で、ピクセルごとに合成します。</p></div>
+    <div class="term"><b>レイヤー順（order）</b><p>スプライトを描く重ね順。海(0)→水面(0.5)→海岸(1)→地形…→都市(10)→ユニット(11)→霧(13)→雲(40)→夜(45)…と積みます。</p></div>
+    <div class="term"><b>ダイクストラ / 最小全域木</b><p>ダイクストラ＝斥候の最短経路探索。最小全域木（MST）＝都市を最短でつなぐ道路網の作り方です。</p></div>
+  </div>
+</section>
+
+<section id="arch">
+  <p class="ch">第4章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--stage)"/><polygon points="2,9 12,15 12,20 2,14" fill="#4A463E"/><polygon points="22,9 12,15 12,20 22,14" fill="var(--grass)"/></svg>全体の地図</h2>
+  <p class="lede">エントリの <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv.ts" target="_blank" rel="noopener"><code class="inline">freeciv.ts</code></a>（664行）が司令塔。タイルセットを読み、世界を生み、レイヤーを積み、演出を配線して、1本のループを回します。</p>
+  <pre class="mermaid">
+flowchart TD
+    ENTRY["freeciv.ts<br/>司令塔(2Dスプライトのみ)"]
+    subgraph DATA["読む"]
+        SPEC["spec-parser + atlas<br/>10枚の.spec→絵の切り出し"]
+        WGEN["worldgen<br/>96×96の大陸生成"]
+    end
+    subgraph DRAW["描く"]
+        TMAP["tilemap<br/>15レイヤーに配置"]
+        FX["fog/daynight/atmosphere<br/>water/glints/dust…"]
+        PRES["present<br/>なめらかズーム合成"]
+    end
+    LIVE["live<br/>斥候・野生動物"]
+    ENTRY --> DATA
+    ENTRY --> DRAW
+    ENTRY --> LIVE
+    WGEN --> TMAP
+    SPEC --> TMAP
+    TMAP --> PRES
+    FX --> PRES
+  </pre>
+  <p>矢印は「上が下を利用する」向きです。<code class="inline">freeciv.ts</code> は、10枚のタイルシートを並列で読み込み→世界を生成し→15枚のスプライトレイヤーを積み上げ→動くものと演出を配線し→毎フレーム、シミュレーション更新・ズーム補間・各演出の更新を回します。<b>「読む」「描く」がはっきり分かれている</b>のが最初の目印です。</p>
+  <div class="callout stone"><b>🧩 すべてはスプライトの重ね順</b><p>3D の奥行きバッファは使いません。かわりに、海・水面・海岸・地形・森・山・川・道・都市・ユニット…と<b>15枚のレイヤーを決まった順で重ねる</b>ことと、各レイヤー内では <code class="inline">x+y</code> の小さいタイルから描く「画家のアルゴリズム」で、立体的な前後関係を作り出します。</p></div>
+</section>
+
+<section id="tileset">
+  <p class="ch">第5章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--sepia)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--sepia-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#63431A"/></svg>タイルセットを読む</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/spec-parser.ts" target="_blank" rel="noopener"><code class="inline">spec-parser.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/atlas.ts" target="_blank" rel="noopener"><code class="inline">atlas.ts</code></a>。本物の Freeciv タイルセットを、コードで読み解きます。</p>
+  <p>Freeciv のタイルは、1枚の大きなPNGに格子状に並んでいて、その「どのマスがどのタイルか」を <code class="inline">.spec</code> という INI 風のテキストが定義します。<code class="inline">spec-parser.ts</code> はこれを自前で解析——シート画像のパス、格子の原点・セル幅・間隔、そして「行・列・タグ名」の対応表を読み取ります。</p>
+  <pre class="mermaid">
+flowchart LR
+    SPEC[".spec テキスト"] --> PARSE["parseSpec<br/>格子geometry+タグ表"]
+    PNG["シートPNG"] --> ATLAS["loadFreecivSheet<br/>共有テクスチャ+アトラス"]
+    PARSE --> ATLAS
+    ATLAS --> FRAME["frameOf(タグ)<br/>= 行×列数+列"]
+  </pre>
+  <p><code class="inline">atlas.ts</code> は、その設計図に沿ってPNGを GPU テクスチャに載せ、グリッドごとに<b>タグ名 → フレーム番号</b>の引き表を作ります。テクスチャは<b>ニアレスト（最近傍）フィルタ</b>——ドット絵をくっきり保ち、1px の境界を越えて色がにじまないようにします。10枚のシート（地形・丘・山・海・水・都市・ユニット・動物・選択枠…）から、15枚の描画レイヤーが作られます。</p>
+  <div class="callout"><b>📐 グリッドは1枚に複数</b><p>1つのシートに複数の格子が同居することもあります。たとえば <code class="inline">water.spec</code> は、川用の 96×48 グリッドと、海岸セル用の 48×24 グリッドを別々に持ちます（海岸グリッドはシート内の x=1, y=437 から始まる）。パーサはこの<b>グリッドごとの独立した原点</b>を正しく扱います。</p></div>
+</section>
+
+<section id="iso">
+  <p class="ch">第6章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--ocean)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--ocean-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#163B5A"/></svg>斜め格子の座標</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/iso.ts" target="_blank" rel="noopener"><code class="inline">iso.ts</code></a>（79行）。マス目 <code class="inline">(x, y)</code> と、画面のピクセル座標を行き来する数学です。</p>
+  <p>タイルは横 <code class="inline">TILE_W = 96</code>・縦 <code class="inline">TILE_H = 48</code> の 2:1 ダイヤ形。マス <code class="inline">(x, y)</code> の画面中心は、次の一行で決まります。</p>
+  <pre class="code"><span class="cm">// マス目 → 画面ピクセル（アイソメトリック変換）</span>
+isoCentre(x, y) = [ (x - y) * <span class="st">48</span>,   <span class="cm">// = TILE_W/2</span>
+                    (x + y) * <span class="st">24</span> ]; <span class="cm">// = TILE_H/2</span>
+<span class="cm">// 逆変換 worldToTile はこれを解いて四捨五入 → 点の下のダイヤに吸着</span></pre>
+  <p>この式のおかげで、隣り合うマスが画面上で綺麗な菱形の格子になります。<code class="inline">iso.ts</code> はさらに、8方向の隣接マス（<code class="inline">DIR8</code>）や、ダイヤの<b>辺</b>を共有する4方向（<code class="inline">EDGES</code>＝川や海岸で使う“実質的な東西南北”）、画面方向を Freeciv のスプライト向き記号に変換する表（<code class="inline">SPRITE_DIR</code>）を提供します。これらは世界生成と描画の両方が共通で使う、いわば“方位磁針”です。</p>
+</section>
+
+<section id="worldgen">
+  <p class="ch">第7章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--grass)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--grass-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#3C6B1C"/></svg>世界を生成する</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/worldgen.ts" target="_blank" rel="noopener"><code class="inline">worldgen.ts</code></a>（526行）。シードから、海に囲まれた1つの大陸を組み上げます。</p>
+  <p>まず<b>高さの地図</b>を作ります。5オクターブの値ノイズ（fBm）に、中心からの距離で効く<b>放射状の減衰</b>（<code class="inline">1 - 距離²×1.15</code>）を掛ける——だから縁は海に沈み、中央が陸になります（<code class="inline">高さ &lt; 0.32</code> は海）。そこへ別の低周波ノイズ＝<b>湿度</b>と、赤道からの<b>緯度</b>を組み合わせて、11種類の地形を振り分けます。</p>
+  <pre class="code"><span class="cm">// 地形の振り分け（抜粋・実際のしきい値）</span>
+<span class="kw">if</span> (elevation &lt; <span class="st">0.32</span>) → Ocean          <span class="cm">// 海面</span>
+<span class="kw">if</span> (lat &gt; <span class="st">0.86</span>)       → Arctic         <span class="cm">// 極地</span>
+<span class="kw">if</span> (lat &gt; <span class="st">0.72</span>)       → Tundra / Mountains
+<span class="kw">if</span> (elevation &gt; <span class="st">0.78</span>) → Mountains
+<span class="kw">if</span> (elevation &gt; <span class="st">0.62</span>) → Hills
+<span class="cm">// 残りは湿度で: 乾→砂漠/平原、湿→湿地/密林/森、中間→草原</span></pre>
+  <div class="terrainrow" aria-hidden="true">
+    <span class="tsw"><i style="background:#264A73"></i>海</span>
+    <span class="tsw"><i style="background:#609840"></i>草原</span>
+    <span class="tsw"><i style="background:#96A850"></i>平原</span>
+    <span class="tsw"><i style="background:#C8B678"></i>砂漠</span>
+    <span class="tsw"><i style="background:#386838"></i>森</span>
+    <span class="tsw"><i style="background:#48743C"></i>密林</span>
+    <span class="tsw"><i style="background:#5C6E56"></i>湿地</span>
+    <span class="tsw"><i style="background:#808454"></i>丘</span>
+    <span class="tsw"><i style="background:#868078"></i>山</span>
+    <span class="tsw"><i style="background:#969C8C"></i>ツンドラ</span>
+    <span class="tsw"><i style="background:#E4EAF0"></i>極地</span>
+  </div>
+  <p>地形ができたら、生活を吹き込みます。<b>川</b>は高地（<code class="inline">高さ &gt; 0.66</code>）から湧き、辺づたいに一番低い隣へ流れ下って海に達したものだけ残す（最大8本／“取り残された水たまり”は消す）。<b>都市</b>は草原か平原に、間隔6マスで最大9つ——中心には首都 Babylon（人口5）、Carthage・Paris・Kyoto は固定座標に。<b>道路</b>は都市どうしを最小全域木で最短につなぎ、約9%の陸地には地形に合った資源や灌漑・鉱山を配置します。</p>
+  <div class="callout grass"><b>🎲 シード固定で毎回同じ世界</b><p>すべての乱数は整数ハッシュから作られ、<code class="inline">seed: 7</code> 固定。だから何度開いても<b>まったく同じ大陸</b>が再現されます。手続き的生成の「決定性」の教科書です。</p></div>
+</section>
+
+<section id="tilemap">
+  <p class="ch">第8章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--desert)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--desert-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#6E552C"/></svg>レイヤーで描く</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/tilemap.ts" target="_blank" rel="noopener"><code class="inline">tilemap.ts</code></a>（368行）。生成された世界を、正しい順でタイル絵に置き換えていきます。</p>
+  <p>描画は<b>奥から手前へ</b>（<code class="inline">x+y</code> の昇順＝画家のアルゴリズム）。1マスは、複数レイヤーにまたがる絵の積み重ねとして表現されます。</p>
+  <table>
+    <tr><th class="num">順</th><th>レイヤー</th><th>内容</th></tr>
+    <tr><td class="num">0〜1</td><td>ocean / water / coast</td><td>深海・浅瀬・きらめく水面・海岸線</td></tr>
+    <tr><td class="num">2〜5</td><td>terrain / forest / hills / mountains</td><td>基本地形と、せり上がる森・丘・山</td></tr>
+    <tr><td class="num">6〜9</td><td>river / road / improvement / special</td><td>川・道・灌漑や鉱山・資源</td></tr>
+    <tr><td class="num">10〜12</td><td>city / unit / animals</td><td>都市・ユニット・野生動物（足元を接地）</td></tr>
+    <tr><td class="num">15</td><td>highlight</td><td>ホバー中のタイル強調枠</td></tr>
+  </table>
+  <div class="callout desert"><b>🧵 境目をなめらかに（Freeciv の技）</b><p>ただ地形ごとに絵を置くだけでは、海と陸の境がカクカクします。そこで <b>CELL_CORNER</b>：浅瀬のタイルを<b>4つの角セル</b>に割り、各角で出会う3マスが陸か水かを見て、境界専用の絵を選ぶ。森・丘・山は <b>CELL_WHOLE の“マッチ”方式</b>で、4辺の隣が同じ地形かをビットにして、輪郭のつながった絵を選びます。道路は「つながっている方向ごとに1枚ずつ」重ね描き。<b>本物の Freeciv と同じタイリング規則</b>を再現しています。</p></div>
+</section>
+
+<section id="present">
+  <p class="ch">第9章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--stone)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--stone-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#4A463E"/></svg>なめらかズーム</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/present.ts" target="_blank" rel="noopener"><code class="inline">present.ts</code></a>（167行）。ドット絵タイルを、隙間なく・なめらかに拡大縮小する巧妙な仕掛けです。</p>
+  <p>問題はこうです。ダイヤ形タイルを中途半端な倍率（例：1.7倍）で直接描くと、タイルの継ぎ目に<b>髪の毛のような隙間（クラック）</b>が出ます。かといってピクセルを整数倍でしか拡大しないと、ズームがガクガクします。</p>
+  <p>解決は<b>2段構え</b>。まずタイルを、<b>2倍のスーパーサンプリングをかけたオフスクリーンの画像</b>に、継ぎ目が出ない“きりのいい倍率”（0.5/1/2/4/8 のいずれか）で描く。次にその画像を、<b>1枚の板</b>として、実際に見せたい中途半端な倍率へ滑らかに縮小して画面に貼る。こうして「くっきり」と「なめらか」を両立します。描画は <b>ワールド → 合成板 → HUD</b> の3パスで流れます。</p>
+</section>
+
+<section id="live">
+  <p class="ch">第10章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--grass)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--grass-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#3C6B1C"/></svg>動くもの</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/live.ts" target="_blank" rel="noopener"><code class="inline">live.ts</code></a>（285行）と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/dust.ts" target="_blank" rel="noopener"><code class="inline">dust.ts</code></a>。止まった地図に、命を吹き込む層です。</p>
+  <p>動くものは2種類。1つは<b>プレイヤーが操る斥候</b>（スカウト）——命令があるまで待機し、目的地が指示されると、経路を1マスずつ約 <code class="inline">620ms/マス</code> で歩きます（滑らかに補間）。選択中は大きさは変えず、<b>透明度がゆっくり明滅</b>して「選ばれている」ことを示します。もう1つは<b>6体の野生動物</b>（狼・熊・豹・虎・ワニ・ゴリラ・蛇から）——都市以外の隣マスへ気ままに歩き回ります。すべてシード固定で、毎回同じ動き。</p>
+  <div class="callout grass"><b>💨 足元に舞う土ぼこり</b><p><code class="inline">dust.ts</code> は、斥候が歩いている間だけ、足元に <code class="inline">95ms</code> ごとに土ぼこりの粒（最大18個のプール）を落とします。粒は<b>ワールド座標に固定</b>されるので、斥候は自分の足跡から離れていく。しかも描画順を<b>ユニットより下・夜の陰りより下</b>に置くことで、斥候が土煙を踏み越え、夜には足跡もろとも暗くなる——手のかからない自然さです。</p></div>
+</section>
+
+<section id="interaction">
+  <p class="ch">第11章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--sepia)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--sepia-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#63431A"/></svg>クリックの手ごたえ</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/pick.ts" target="_blank" rel="noopener"><code class="inline">pick.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/commandfx.ts" target="_blank" rel="noopener"><code class="inline">commandfx.ts</code></a>。操作に“手ごたえ”を返す、ゲームフィールの層です。</p>
+  <p>マウスを乗せると、<code class="inline">pick.ts</code> がそのタイルに<b>水色の枠</b>を置き、地形・資源・改良・川/道・座標をまとめた<b>ツールチップ</b>を出します（3Dのピッキング機能ではなく、座標計算だけで実現）。斥候を選んで行き先をクリックすると、<code class="inline">freeciv.ts</code> の<b>ダイクストラ経路探索</b>（道の上は移動コスト <code class="inline">1/3</code> に割引）が最短路を求め、斥候がそこへ歩き出します。</p>
+  <p>その瞬間の視覚フィードバックが <code class="inline">commandfx.ts</code>。すべて WGSL シェーダで1枚の板に描かれます。</p>
+  <table>
+    <tr><th>演出</th><th>中身</th></tr>
+    <tr><td>目的地のリング</td><td>暖色の<b>点線（マーチングアンツ）</b>が回転（7本の破線が流れる）</td></tr>
+    <tr><td>クリックのさざ波</td><td>淡いシアンの<b>ピング（波紋）</b>が広がって <code class="inline">520ms</code> で消える（同時5つまで）</td></tr>
+    <tr><td>選択中の斥候</td><td>（ここではなく）ユニット自身の明滅で表現</td></tr>
+  </table>
+</section>
+
+<section id="fog">
+  <p class="ch">第12章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--stone)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--stone-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#4A463E"/></svg>戦場の霧</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/fog.ts" target="_blank" rel="noopener"><code class="inline">fog.ts</code></a>（256行）。未踏の土地を霞ませる、あの“霧”です。</p>
+  <p>ポイントは、霧を<b>タイルごとの絵で置かない</b>こと。もしそうすると、ダイヤの継ぎ目に不自然な段差が出ます。代わりに、世界に貼りついた<b>1枚の連続したモヤの板</b>を用意し、そのシェーダが「タイルごとの視界の強さ」を記録した小さなテクスチャを<b>なめらかに（バイリニアで）</b>読んで、モヤの濃さを決めます。</p>
+  <p>CPU 側は「踏破済み・現在視界・霧の濃さ」を配列で管理。地図は最初から<b>全域が踏破済み</b>で、見ていない土地は薄い霧（<code class="inline">0.72</code>）、視界に入ると <code class="inline">450ms</code> かけて晴れます。視界の半径は<b>都市の周り2マス・斥候の周り3マス</b>。さらにシェーダは、fBm ノイズで霧の<b>ふちを揺らして</b>、風にたなびくように見せます。</p>
+</section>
+
+<section id="daynight">
+  <p class="ch">第13章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--ocean)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--ocean-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#163B5A"/></svg>昼と夜</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/daynight.ts" target="_blank" rel="noopener"><code class="inline">daynight.ts</code></a>（215行）。<kbd>N</kbd> キーで、世界が昼と夜を行き来します。</p>
+  <p><kbd>N</kbd> を押すと、<code class="inline">5000ms</code> かけて昼 ⇄ 夜へなめらかに遷移し、到達した側で<b>とどまります</b>（自動ループはしません）。夜は、画面全体を覆う<b>1枚の暗い青の板</b>（<code class="inline">rgb(0.04, 0.06, 0.18)</code>）の不透明度を、時間に比例して最大 <code class="inline">0.62</code> まで上げるだけ。そして日が傾くと、各<b>都市が暖色の光</b>（<code class="inline">rgb(1.0, 0.82, 0.5)</code>）を加算でにじませ、街の灯がともります。</p>
+  <div class="callout ocean"><b>💡 “脈打ち”を消した設計</b><p>コメントによれば、以前は夕暮れに暖色を差す演出があったものの、地平線を越える瞬間に「明るくなってから暗くなる」<b>不自然な脈動</b>が出たため、あえて外して<b>一定の寒色</b>に統一したとのこと。判断の理由まで読めるのが、このコードの良さです。</p></div>
+</section>
+
+<section id="sky">
+  <p class="ch">第14章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--ocean)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--ocean-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#163B5A"/></svg>空・雲・水・きらめき</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/atmosphere.ts" target="_blank" rel="noopener"><code class="inline">atmosphere.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/water.ts" target="_blank" rel="noopener"><code class="inline">water.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/glints.ts" target="_blank" rel="noopener"><code class="inline">glints.ts</code></a>。空と海の“生きた”質感です。</p>
+  <div class="grid3">
+    <div class="term"><b>☁️ 雲と影</b><p>5オクターブの fBm で流れる雲を1枚の板に描き、少しずらした<b>雲の影</b>を地面に落とす。どちらもズームで寄ると消える（俯瞰のときだけの演出）。夜は影が消えます。</p></div>
+    <div class="term"><b>🌊 水面のさざなみ</b><p>海タイル1枚ごとに、3つのサイン波を足し合わせた<b>コースティック（水の揺らぎ）</b>を GPU で描画。タイルごとに位相をずらし、隣どうしが同時に光らないように。</p></div>
+    <div class="term"><b>✨ 太陽のきらめき</b><p>外洋にだけ、固定した太陽の方角へ伸びる<b>細い光の筋</b>がチカチカ瞬く。夜（<code class="inline">daylight</code>）になると消灯します。</p></div>
+  </div>
+  <p>これらに共通するのが、<b>「世界に貼った1枚の板＋自前 WGSL シェーダ」</b>という作り。板のスプライトの色（tint）に「画面上の世界の矩形」や「タイル位置＋位相」を忍ばせ、ピクセルごとに模様を合成します。霧・雲・水・きらめきはすべてこの共通テクニックで、CPU の負担をほぼ増やしません。</p>
+</section>
+
+<section id="frame">
+  <p class="ch">第15章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--sepia)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--sepia-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#63431A"/></svg>古地図と縁取り</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/backdrop.ts" target="_blank" rel="noopener"><code class="inline">backdrop.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/vignette.ts" target="_blank" rel="noopener"><code class="inline">vignette.ts</code></a>・<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/minimap.ts" target="_blank" rel="noopener"><code class="inline">minimap.ts</code></a>。世界の“額縁”と俯瞰図です。</p>
+  <p><code class="inline">backdrop.ts</code> は、島の背後に<b>1569年の Mercator 世界地図</b>（パブリックドメイン）を敷きます。暗く落とし、紙のような色をかぶせて“古びた抽象背景”に加工。さらに海岸が外洋へ溶け込むよう、青いにじみ（sea halo）を島の縁に足します。静的で、地図と一緒にパン・ズームします。</p>
+  <p><code class="inline">vignette.ts</code> は、画面の四隅を暗く落とす<b>周辺減光</b>。中央 50% は明るいまま、隅へ向かってなめらかに暗くして、背景の“余白”を目立たなくします。<code class="inline">minimap.ts</code> は右下の<b>ミニマップ</b>（長辺180px）——世界を1タイル＝1ピクセルのデータ画像として一度に描き、地形色・都市の点・現在の表示範囲（回転した四角形をはみ出さないよう切り抜き）を重ね、クリック／ドラッグでそこへ表示を飛ばせます。</p>
+</section>
+
+<section id="themes">
+  <p class="ch">第16章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--grass)"/><polygon points="2,9 12,15 12,20 2,14" fill="var(--grass-deep)"/><polygon points="22,9 12,15 12,20 22,14" fill="#3C6B1C"/></svg>設計テーマ</h2>
+  <p class="lede">19ファイルに散らばって見えて、じつは一貫した4つの考え方が通っています。</p>
+  <div class="grid2">
+    <div class="term"><b>🖼️ 2Dスプライトだけで作る</b><p>シーンもカメラもメッシュもライトも無し。奥行きは「レイヤー順」と「x+yの描画順」で作る。3Dに頼らず立体を見せる潔さ。</p></div>
+    <div class="term"><b>🗺️ 本物のデータに忠実</b><p>Freeciv の .spec を自前で解析し、CELL_CORNER や CELL_WHOLE といった本家のタイリング規則を再現。データに忠実だから“らしく”見える。</p></div>
+    <div class="term"><b>🎨 演出は「板＋シェーダ」</b><p>霧・雲・水・きらめきは、世界に貼った1枚の板と自前WGSLで合成。CPUを増やさず、GPUに任せて豊かな空気感を出す。</p></div>
+    <div class="term"><b>🎲 決定的な生成</b><p>世界も動物の動きもシード固定。整数ハッシュ由来の乱数で、毎回まったく同じ世界・同じ挙動を再現できる。</p></div>
+  </div>
+  <div class="callout"><b>📝 コメントは「理由の記録」</b><p>このコードのコメントには「なぜそうしたか」がていねいに書かれています。<i>夕暮れの脈動を消して一定の寒色にした理由／霧を連続した板にして継ぎ目を消す判断／ズームのクラックをスーパーサンプリングで防ぐ工夫</i>——判断の理由ごと読めるのが、このサンプルの教材価値です。Minecraft・Platformer・Tetris・Sandblox・DOOM デモと共通する“コメント文化”が、ここにも息づいています。</p></div>
+</section>
+
+<section id="files">
+  <p class="ch">第17章</p>
+  <h2><svg viewBox="0 0 24 22" width="24" aria-hidden="true"><polygon points="12,3 22,9 12,15 2,9" fill="var(--stage)"/><polygon points="2,9 12,15 12,20 2,14" fill="#4A463E"/><polygon points="22,9 12,15 12,20 22,14" fill="var(--grass)"/></svg>ファイル一覧（全19ファイル）</h2>
+  <p class="lede">コードリーディングのおともに。行数は <code class="inline">master</code> ブランチのソース実測値です。<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv.ts" target="_blank" rel="noopener"><code class="inline">freeciv.ts</code></a> が最大で、合計およそ4,342行。</p>
+  <table>
+    <tr><th>ファイル</th><th style="width:12%">行数</th><th>やくわり</th></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--stage); color:#EDE3D2">エントリ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv.ts" target="_blank" rel="noopener"><code class="inline">freeciv.ts</code></a></td><td class="num">664</td><td>司令塔。読込・生成・レイヤー・演出・入力・ズーム・経路探索を配線</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--sepia-bg)">データ・座標</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/worldgen.ts" target="_blank" rel="noopener"><code class="inline">worldgen.ts</code></a></td><td class="num">526</td><td>大陸の手続き生成（地形・川・都市・道・資源）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/spec-parser.ts" target="_blank" rel="noopener"><code class="inline">spec-parser.ts</code></a></td><td class="num">160</td><td>Freeciv の .spec タイル設計図を解析</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/atlas.ts" target="_blank" rel="noopener"><code class="inline">atlas.ts</code></a></td><td class="num">118</td><td>PNG＋.spec からアトラスとタグ→フレーム表を構築</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/iso.ts" target="_blank" rel="noopener"><code class="inline">iso.ts</code></a></td><td class="num">79</td><td>アイソメトリック座標変換と8方向テーブル</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--desert-bg)">描画・合成</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/tilemap.ts" target="_blank" rel="noopener"><code class="inline">tilemap.ts</code></a></td><td class="num">368</td><td>世界を15レイヤーのタイル絵に配置（海岸・森・山の境界処理）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/present.ts" target="_blank" rel="noopener"><code class="inline">present.ts</code></a></td><td class="num">167</td><td>2×スーパーサンプルのオフスクリーンでクラックのないズーム合成</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--grass-bg)">動き・操作</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/live.ts" target="_blank" rel="noopener"><code class="inline">live.ts</code></a></td><td class="num">285</td><td>斥候（プレイヤー操作）と6体の野生動物のアニメ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/minimap.ts" target="_blank" rel="noopener"><code class="inline">minimap.ts</code></a></td><td class="num">267</td><td>右下のミニマップと、クリックで表示移動</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/dust.ts" target="_blank" rel="noopener"><code class="inline">dust.ts</code></a></td><td class="num">187</td><td>歩く斥候の足元に舞う土ぼこりの粒</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/commandfx.ts" target="_blank" rel="noopener"><code class="inline">commandfx.ts</code></a></td><td class="num">173</td><td>目的地の点線リングとクリックの波紋（WGSL）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/pick.ts" target="_blank" rel="noopener"><code class="inline">pick.ts</code></a></td><td class="num">127</td><td>ホバータイルの強調枠と地形ツールチップ</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--ocean-bg)">環境・演出</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/atmosphere.ts" target="_blank" rel="noopener"><code class="inline">atmosphere.ts</code></a></td><td class="num">216</td><td>流れる雲と地面に落ちる雲の影（fBm・5オクターブ）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/daynight.ts" target="_blank" rel="noopener"><code class="inline">daynight.ts</code></a></td><td class="num">215</td><td>Nキーで昼夜（5秒遷移）と都市の灯り</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/fog.ts" target="_blank" rel="noopener"><code class="inline">fog.ts</code></a></td><td class="num">256</td><td>連続した1枚の板で描く戦場の霧（視界2〜3マス）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/glints.ts" target="_blank" rel="noopener"><code class="inline">glints.ts</code></a></td><td class="num">176</td><td>外洋の太陽のきらめき（昼のみ）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/backdrop.ts" target="_blank" rel="noopener"><code class="inline">backdrop.ts</code></a></td><td class="num">145</td><td>背景の Mercator 1569 世界地図と海のにじみ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/water.ts" target="_blank" rel="noopener"><code class="inline">water.ts</code></a></td><td class="num">120</td><td>海タイルの水面のさざなみ（GPU コースティック）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv/vignette.ts" target="_blank" rel="noopener"><code class="inline">vignette.ts</code></a></td><td class="num">93</td><td>画面四隅の周辺減光（背景の余白を隠す）</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--ink-soft)">行数は <code class="inline">master</code> ブランチ（2026年時点）のソース実測値です。合計およそ4,342行（19ファイル）。</p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="inner">
+    <p>ソースコード：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/freeciv.ts" target="_blank" rel="noopener">BabylonJS/Babylon-Lite — lab/lite/src/demos/freeciv.ts</a>（コンポーネント群は同階層の <a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/freeciv" target="_blank" rel="noopener">freeciv/</a> フォルダ）</p>
+    <p>タイル画像は <a href="https://www.freeciv.org/" target="_blank" rel="noopener">Freeciv</a> プロジェクトの <code class="inline">amplio2</code> タイルセットを実行時に取得して使用しています（.spec の解析コードは公開仕様に基づく独自実装）。背景の世界地図は 1569 年の Mercator 図法（パブリックドメイン）です。本ページの図は mermaid.js とインラインSVGで描画しています。</p>
+    <p>解説対象のソースコード（Babylon-Lite）は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/LICENSE" target="_blank" rel="noopener">Apache License 2.0</a> で公開されています。本ページで引用しているコード断片・数値の著作権はそれぞれの著作者に帰属します。Freeciv のタイルセットは Freeciv プロジェクト（GNU GPL 等）に帰属します。図の描画に使用している <a href="https://mermaid.js.org/" target="_blank" rel="noopener">mermaid.js</a>（MIT License）と Web フォント（SIL Open Font License）は CDN から参照しています。</p>
+    <p>本ページおよび解説対象のデモは、Freeciv プロジェクトや特定のゲームタイトルとは無関係の、独立した教育目的のコンテンツです。</p>
+  </div>
+</footer>
+
+<script type="module">
+try {
+  const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11.16.0/+esm');
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    securityLevel: 'loose',
+    fontFamily: "'Zen Kaku Gothic New', sans-serif",
+    flowchart: { htmlLabels: true, curve: 'linear', nodeSpacing: 34, rankSpacing: 42 },
+    themeVariables: {
+      fontSize: '13.5px',
+      primaryColor: '#EDE2CC',
+      primaryTextColor: '#31291B',
+      primaryBorderColor: '#B07C33',
+      lineColor: '#9A8A70',
+      secondaryColor: '#EAF1DA',
+      tertiaryColor: '#DFEAF3',
+      clusterBkg: '#F7F1E4',
+      clusterBorder: '#CDBFA1',
+      edgeLabelBackground: '#F3ECDC',
+      titleColor: '#31291B'
+    }
+  });
+  // Web フォント（Zen Kaku Gothic New 等）の読み込みを待ってから測定・描画する。
+  // 待たないとフォールバックフォントの幅でノードが確定し、本フォント差し替え後に
+  // 日本語テキストがノード枠からはみ出して切れてしまう。
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) {}
+  }
+  await mermaid.run({ querySelector: 'pre.mermaid' });
+} catch (e) {
+  console.error('mermaid の読み込みに失敗しました（オフラインの可能性）:', e);
+}
+</script>
+</body>
+</html>
