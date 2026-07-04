@@ -14,6 +14,7 @@ WebGPU 専用の軽量 3D エンジン **Babylon Lite** の公式デモを、コ
 | 光るブロックのつくりかた（3D テトリス） | 公開中 | [tetris/](tetris/index.html) |
 | ブロックで作って歩けるサンドボックス（Sandblox） | 公開中 | [sandblox/](sandblox/index.html) |
 | ブラウザで動く DOOM のつくりかた（DOOM 再現） | 公開中 | [doom/](doom/index.html) |
+| アイソメトリックの世界地図のつくりかた（Freeciv 風） | 公開中 | [freeciv/](freeciv/index.html) |
 
 トップページ（全デモの一覧カード）: [index.html](index.html)
 
@@ -52,6 +53,8 @@ babylon-lite-demo-guide/
 │   └── index.html          # ブロック・サンドボックスの解説（自己完結・インライン CSS）
 ├── doom/
 │   └── index.html          # DOOM 再現デモの解説（自己完結・インライン CSS）
+├── freeciv/
+│   └── index.html          # Freeciv 風アイソメトリック地図の解説（自己完結・インライン CSS）
 ├── LICENSE                 # 解説コンテンツのライセンス（CC BY 4.0）
 └── README.md
 ```
