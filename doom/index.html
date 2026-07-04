@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ブラウザで動く DOOM のつくりかた — Babylon Lite doom デモ解説</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EFEAE3;
+  --panel: #FFFFFF;
+  --ink: #221B18;
+  --ink-soft: #6B605A;
+  --line: #E2DAD0;
+  --line-strong: #CBBFB2;
+  --red: #B3221B; --red-deep: #7E1712; --red-bg: #F8E4E1;
+  --fire: #CF6A16; --fire-deep: #9C4D0E; --fire-bg: #FAEEDF;
+  --toxic: #5E8F2C; --toxic-deep: #416719; --toxic-bg: #EDF3E0;
+  --steel: #566473; --steel-deep: #3C4753; --steel-bg: #E8ECF0;
+  --brown: #7C5230; --brown-deep: #5A3A1F; --brown-bg: #F0E7DC;
+  --stage: #16100E;
+  --font-display: 'DotGothic16', 'Zen Kaku Gothic New', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-code: 'M PLUS 1 Code', monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.95;
+}
+a { color: var(--red-deep); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--fire); outline-offset: 2px; border-radius: 4px; }
+::selection { background: #F3CBB0; }
+
+/* ── ヒーロー（地獄の焔） ─────────── */
+.hero {
+  background:
+    radial-gradient(75% 55% at 50% 112%, rgba(214,92,20,.55), transparent 60%),
+    radial-gradient(55% 45% at 50% 100%, rgba(179,34,27,.6), transparent 55%),
+    radial-gradient(80% 60% at 84% 4%, rgba(120,90,60,.22), transparent 55%),
+    linear-gradient(180deg, #1B1310 0%, var(--stage) 55%, #2A1310 100%);
+  border-bottom: 3px solid #0C0806;
+  padding: 64px 24px 54px;
+  color: #F0E7DE;
+}
+.hero-inner {
+  max-width: 1000px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center;
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 13px; letter-spacing: .22em;
+  color: #E9A24E; margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(25px, 4.2vw, 40px);
+  line-height: 1.5; margin: 0 0 14px; letter-spacing: .01em;
+  color: #FBF3EA;
+}
+.hero p.sub { margin: 0; max-width: 560px; color: #CDBEB2; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 34px; margin-top: 26px; font-family: var(--font-code); }
+.stat b { display: block; font-size: 24px; line-height: 1.3; font-weight: 700; color: #FBF3EA; }
+.stat span { font-size: 12px; color: #B39C8C; letter-spacing: .06em; }
+.cubes { display: grid; grid-template-columns: repeat(2, 72px); gap: 18px 16px; }
+.cubes svg { filter: drop-shadow(0 6px 12px rgba(0,0,0,.55)); }
+.cubes svg:nth-child(1) { animation: bob 5s ease-in-out infinite; }
+.cubes svg:nth-child(2) { animation: bob 5s ease-in-out .8s infinite; }
+.cubes svg:nth-child(3) { animation: bob 5s ease-in-out 1.6s infinite; }
+.cubes svg:nth-child(4) { animation: bob 5s ease-in-out 2.4s infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+/* ── レイアウト ───────────────────────── */
+.layout {
+  max-width: 1060px; margin: 0 auto;
+  padding: 44px 24px 90px;
+  display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 46px;
+}
+nav.toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; }
+nav.toc .toc-title { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 10px 8px; }
+nav.toc a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 8px; border-radius: 6px;
+  color: var(--ink-soft); text-decoration: none; line-height: 1.5;
+}
+nav.toc a:hover { background: var(--panel); color: var(--ink); }
+.chip { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.18); }
+
+main { min-width: 0; }
+section { margin: 0 0 78px; scroll-margin-top: 26px; }
+.ch { font-family: var(--font-display); font-size: 12px; letter-spacing: .2em; color: var(--ink-soft); margin: 0 0 6px; }
+h2 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: 25px; line-height: 1.4;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 10px;
+}
+h2 svg { flex: none; }
+h3 { font-size: 16.5px; margin: 34px 0 8px; }
+p { margin: 0 0 16px; }
+.lede { color: var(--ink-soft); margin-bottom: 22px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.term { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.term b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+.term p { font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.8; }
+
+.callout { border: 1px solid var(--line); border-left: 5px solid var(--fire); background: var(--fire-bg); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+.callout.red { border-left-color: var(--red); background: var(--red-bg); }
+.callout.toxic { border-left-color: var(--toxic); background: var(--toxic-bg); }
+.callout.steel { border-left-color: var(--steel); background: var(--steel-bg); }
+.callout.brown { border-left-color: var(--brown); background: var(--brown-bg); }
+.callout b { font-size: 14.5px; }
+.callout p { margin: 4px 0 0; font-size: 14px; }
+
+pre.mermaid {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 12px; margin: 20px 0;
+  display: flex; justify-content: center; overflow-x: auto;
+  font-family: var(--font-code); font-size: 13px; color: var(--ink-soft);
+}
+pre.code {
+  font-family: var(--font-code); font-size: 13px; line-height: 1.75;
+  background: var(--stage); color: #EAE0D6;
+  border-radius: 10px; padding: 18px 22px; overflow-x: auto; margin: 18px 0;
+}
+pre.code .cm { color: #9C8A7A; }
+pre.code .kw { color: #E9A24E; }
+pre.code .st { color: #9FC46A; }
+code.inline { font-family: var(--font-code); font-size: .88em; background: #E7DED3; border-radius: 5px; padding: 1px 7px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 18px 0; }
+th { background: #EAE1D6; text-align: left; font-weight: 700; }
+th, td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.num { font-family: var(--font-code); text-align: right; white-space: nowrap; }
+tr.gh td { font-family: var(--font-display); font-size: 12.5px; letter-spacing: .12em; padding: 7px 14px; }
+kbd { font-family: var(--font-code); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line-strong); border-bottom-width: 3px; border-radius: 6px; padding: 1px 9px; white-space: nowrap; }
+
+footer { border-top: 3px solid var(--line-strong); margin-top: 30px; padding: 28px 24px 60px; }
+footer .inner { max-width: 1060px; margin: 0 auto; font-size: 13.5px; color: var(--ink-soft); }
+
+figure.fig { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 14px 12px; margin: 20px 0; }
+figure.fig figcaption { text-align: center; font-size: 13px; color: var(--ink-soft); margin-top: 10px; line-height: 1.75; padding: 0 12px; }
+
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; gap: 26px; padding-top: 20px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 0; }
+  nav.toc .toc-title { display: none; }
+  nav.toc .links { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  nav.toc a { white-space: nowrap; }
+  .hero-inner { grid-template-columns: 1fr; }
+  .cubes { grid-template-columns: repeat(4, 56px); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cubes svg { animation: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow">BABYLON LITE 公式デモを読む</p>
+      <h1>ブラウザの中に、<br>地獄をもう一度つくる。</h1>
+      <p class="sub">WebGPU 専用の軽量 3D エンジン「Babylon Lite」に付属する、名作 FPS「DOOM」の再現デモ。バイナリの WAD を自前で読み解き、当時の“帯状に暗くなる光”まで忠実に描く——GPL コードを一切使わないクリーンルーム実装、全 29 ファイルのしくみを初心者向けにやさしく解説します。</p>
+      <div class="stats">
+        <div class="stat"><b>29</b><span>ファイル</span></div>
+        <div class="stat"><b>約5,010</b><span>行のコード</span></div>
+        <div class="stat"><b>8種</b><span>のモンスター</span></div>
+        <div class="stat"><b>35Hz</b><span>シミュレーション</span></div>
+      </div>
+    </div>
+    <div class="cubes" aria-hidden="true">
+      <!-- ファイアボール -->
+      <svg viewBox="0 0 16 16" width="72" shape-rendering="crispEdges"><g fill="#B3221B"><rect x="6" y="1" width="4" height="1"/><rect x="4" y="2" width="8" height="1"/><rect x="3" y="3" width="10" height="1"/><rect x="2" y="4" width="12" height="8"/><rect x="3" y="12" width="10" height="1"/><rect x="4" y="13" width="8" height="1"/><rect x="6" y="14" width="4" height="1"/></g><g fill="#E8611C"><rect x="5" y="4" width="6" height="7"/><rect x="4" y="5" width="8" height="5"/></g><g fill="#FFD86A"><rect x="6" y="6" width="4" height="4"/></g></svg>
+      <!-- どくろ -->
+      <svg viewBox="0 0 16 16" width="72" shape-rendering="crispEdges"><g fill="#E9E3D6"><rect x="4" y="2" width="8" height="1"/><rect x="3" y="3" width="10" height="1"/><rect x="2" y="4" width="12" height="6"/><rect x="3" y="10" width="10" height="1"/><rect x="4" y="11" width="8" height="2"/></g><g fill="#16100E"><rect x="4" y="5" width="3" height="3"/><rect x="9" y="5" width="3" height="3"/><rect x="7" y="8" width="2" height="2"/><rect x="5" y="12" width="1" height="1"/><rect x="7" y="12" width="1" height="1"/><rect x="9" y="12" width="1" height="1"/></g><g fill="#B7AE9C"><rect x="2" y="9" width="1" height="1"/><rect x="13" y="9" width="1" height="1"/></g></svg>
+      <!-- メディキット -->
+      <svg viewBox="0 0 16 16" width="72" shape-rendering="crispEdges"><g fill="#E9E3D6"><rect x="2" y="3" width="12" height="10"/></g><g fill="#B7AE9C"><rect x="2" y="3" width="12" height="1"/><rect x="2" y="12" width="12" height="1"/></g><g fill="#B3221B"><rect x="7" y="5" width="2" height="6"/><rect x="5" y="7" width="6" height="2"/></g></svg>
+      <!-- ショットシェル -->
+      <svg viewBox="0 0 16 16" width="72" shape-rendering="crispEdges"><g fill="#B3221B"><rect x="4" y="2" width="8" height="8"/></g><g fill="#E8611C"><rect x="4" y="2" width="8" height="1"/></g><g fill="#E0B23A"><rect x="4" y="10" width="8" height="4"/></g><g fill="#9C7A1E"><rect x="4" y="11" width="8" height="1"/><rect x="4" y="13" width="8" height="1"/></g></svg>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">もくじ</p>
+  <div class="links">
+    <a href="#intro"><span class="chip" style="background:var(--red)"></span>このデモとは</a>
+    <a href="#play"><span class="chip" style="background:var(--fire)"></span>あそびかた</a>
+    <a href="#glossary"><span class="chip" style="background:var(--steel)"></span>用語ミニ辞典</a>
+    <a href="#arch"><span class="chip" style="background:var(--stage)"></span>全体の地図</a>
+    <a href="#wad"><span class="chip" style="background:var(--brown)"></span>WADを読み解く</a>
+    <a href="#geometry"><span class="chip" style="background:var(--steel)"></span>2Dの地図を3Dの壁に</a>
+    <a href="#material"><span class="chip" style="background:var(--fire)"></span>本物の光を再現する</a>
+    <a href="#sky"><span class="chip" style="background:var(--steel)"></span>空のからくり</a>
+    <a href="#mobj"><span class="chip" style="background:var(--toxic)"></span>モンスターの設計図</a>
+    <a href="#ai"><span class="chip" style="background:var(--toxic)"></span>敵を動かす頭脳</a>
+    <a href="#sprites"><span class="chip" style="background:var(--fire)"></span>スプライトを板に描く</a>
+    <a href="#player"><span class="chip" style="background:var(--red)"></span>プレイヤーと武器</a>
+    <a href="#combat"><span class="chip" style="background:var(--red)"></span>撃つ・当たる</a>
+    <a href="#specials"><span class="chip" style="background:var(--brown)"></span>扉とリフト</a>
+    <a href="#hud"><span class="chip" style="background:var(--toxic)"></span>ステータスバー</a>
+    <a href="#sound"><span class="chip" style="background:var(--steel)"></span>音</a>
+    <a href="#themes"><span class="chip" style="background:var(--red)"></span>設計テーマ</a>
+    <a href="#files"><span class="chip" style="background:var(--stage)"></span>ファイル一覧</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="intro">
+  <p class="ch">第1章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--red-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--red)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>このデモとは</h2>
+  <p class="lede">「あの1993年の DOOM を、プラグインもエミュレータも使わず、素のブラウザとコードだけで動かせるの？」に、動く実装で答えるサンプルです。</p>
+  <p>このデモは、Babylon.js ファミリーの WebGPU 専用ランタイム <b>Babylon Lite</b> の公式リポジトリに含まれる、<b>DOOM</b> の再現です。ゲームの中身が入った <b>WAD ファイル</b>（バイナリのデータ塊）をネット越しに読み込み、その中の地図・テクスチャ・スプライト・音を<b>自前のコードで解析</b>して、3D の迷宮として描き、モンスターを動かし、銃を撃てるところまで作り込まれています。</p>
+  <div class="callout red"><b>⚖️ クリーンルーム × Freedoom</b><p>各ファイルの冒頭には「オリジナルの DOOM エンジン（GPL）のソースは一切参照・複製していない」と明記され、公開仕様（Doom Wiki／Unofficial Doom Specs）だけを頼りに<b>ゼロから書き起こした</b>ことが宣言されています。読み込むデータも、権利的にフリーな互換 IWAD <b>Freedoom</b>（<code class="inline">freedoom1.wad</code>）。だから安心して中身を読めます。</p></div>
+  <p>プログラムとしての見どころは、次の3点です。</p>
+  <div class="grid3">
+    <div class="term"><b>📦 バイナリを手で開ける</b><p>WAD の12バイトのヘッダから、地図の頂点・線・区画まで、生のバイト列を1つずつ意味に変えていく“データ考古学”。フォーマットの教科書です。</p></div>
+    <div class="term"><b>💡 “本物の光”を再現</b><p>DOOM 特有の、距離で<b>カクッと帯状に暗くなる</b>あの陰影。RGB を混ぜるのではなく、パレット番号を COLORMAP で引き直すという当時の手法を、そのままシェーダで再現します。</p></div>
+    <div class="term"><b>👾 データ駆動のモンスター</b><p>敵の見た目も行動も、コードではなく<b>表（テーブル）</b>で定義。「型 → 状態 → 行動」の3段構えで動く、DOOM 名物のアクターシステムを移植しています。</p></div>
+  </div>
+</section>
+
+<section id="play">
+  <p class="ch">第2章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--fire-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--fire)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>あそびかた</h2>
+  <p class="lede">コードを読む前に、まず走り回るのがいちばんの近道です。操作はオリジナルの DOOM に沿っています。</p>
+  <div class="callout"><b>🎮 ブラウザで遊ぶ</b><p><a href="https://babylonjs.com/lite-demos/demo-doom.html" target="_blank" rel="noopener">babylonjs.com のライブデモを開く →</a>（WebGPU 対応ブラウザが必要です。初回は WAD の読み込みに少し時間がかかります）</p></div>
+  <table>
+    <tr><th style="width:42%">操作</th><th>すること</th></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>前進・後退（移動速度 320 units/秒）</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>左右に旋回（旋回速度 2.4 rad/秒）</td></tr>
+    <tr><td><kbd>,</kbd> <kbd>.</kbd> / <kbd>Alt</kbd>＋<kbd>←</kbd><kbd>→</kbd></td><td>左右に横歩き（ストレイフ）</td></tr>
+    <tr><td><kbd>Shift</kbd></td><td>ダッシュ（移動2倍）</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>使う（扉・スイッチ・リフト）。死亡時はリスポーン</td></tr>
+    <tr><td><kbd>Ctrl</kbd> / マウス左</td><td>発砲</td></tr>
+    <tr><td><kbd>1</kbd>〜<kbd>7</kbd></td><td>武器切替（拳/ピストル/ショットガン/チェーンガン/ロケット/プラズマ/BFG）</td></tr>
+  </table>
+  <div class="callout steel"><b>🕹️ マウスルックは無し</b><p>オリジナル同様、上下を向く操作はありません（DOOM の世界は高さ方向の照準を“自動”で合わせます）。カメラは地図の高さに沿って動く一人称視点です。</p></div>
+</section>
+
+<section id="glossary">
+  <p class="ch">第3章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--steel-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--steel)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>用語ミニ辞典</h2>
+  <p class="lede">この先の章で出てくることばを先にまとめて紹介します。分からなくなったらここに戻ってきてください。</p>
+  <div class="grid2">
+    <div class="term"><b>WAD / IWAD</b><p>DOOM の全データ（地図・絵・音）を1つに束ねたファイル形式（"Where's All the Data"）。本体データを IWAD と呼びます。ここでは無料互換の Freedoom を使用。</p></div>
+    <div class="term"><b>ランプ（lump）</b><p>WAD の中に並ぶ、名前付きのデータの塊1つ1つ。地図・テクスチャ・音などがすべてランプとして格納されています。</p></div>
+    <div class="term"><b>BSP（二分空間分割）</b><p>地図をあらかじめ木構造に切り分けておく手法。「この点はどの区画にいる？」を高速に答えられ、描画順にも使えます。</p></div>
+    <div class="term"><b>セクター / リニデフ / サイドデフ</b><p>セクター＝床と天井の高さを持つ“部屋”、リニデフ＝壁の線、サイドデフ＝線に貼るテクスチャ情報。DOOM の地図はこの3つでできています。</p></div>
+    <div class="term"><b>フラット / パッチ</b><p>フラット＝床天井用の 64×64 のタイル画像、パッチ＝壁やスプライト用の“列”で圧縮された絵。どちらもパレット番号の並びです。</p></div>
+    <div class="term"><b>パレット / COLORMAP</b><p>パレット＝256色の対応表、COLORMAP＝「この明るさなら何色に化けるか」の34段の変換表。DOOM の色と陰影の核心です。</p></div>
+    <div class="term"><b>パレットインデックス描画</b><p>ピクセルに RGB ではなく“色番号”を持たせ、表を引いて最終色を決める方式。当時のメモリ節約術で、あの独特の陰影の理由でもあります。</p></div>
+    <div class="term"><b>mobj（マップオブジェクト）</b><p>モンスター・弾・アイテム・置物——動くものすべての共通の器。位置・体力・状態などを持ちます。</p></div>
+    <div class="term"><b>ステート / アクション / インフォ</b><p>DOOM のアクターは「インフォ（型）→ ステート（アニメの各コマ）→ アクション（AIの関数）」の表で動きます。データ駆動の代表例。</p></div>
+    <div class="term"><b>ヒットスキャン</b><p>弾を飛ばさず、撃った瞬間に光線で当たり判定する方式。ピストルやショットガンはこれ。ロケットだけは弾（飛翔体）です。</p></div>
+    <div class="term"><b>ビルボードスプライト</b><p>2Dの絵を常にカメラへ正面を向ける板に貼って“立体っぽく”見せる技。DOOM の敵はすべてこの板です。8方向の絵を使い分けます。</p></div>
+    <div class="term"><b>BAM（角度の単位）</b><p>Binary Angle Measurement。角度を32bit整数で表す DOOM 流の方法。ビット演算だけで「敵をどの方向から見ているか」を8分割できます。</p></div>
+    <div class="term"><b>tic（ティック）</b><p>DOOM のシミュレーション1コマ。<b>1秒 = 35 tic</b>固定。描画が速くても遅くても、ゲーム進行は常にこの刻みで進みます。</p></div>
+    <div class="term"><b>スペシャル</b><p>壁や床に割り当てられた“仕掛け”。扉・リフト・昇降床・スイッチ・出口などを、線と区画の番号で表します。</p></div>
+  </div>
+</section>
+
+<section id="arch">
+  <p class="ch">第4章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="#0C0806"/><rect x="5" y="5" width="14" height="14" fill="var(--stage)"/><rect x="8" y="9" width="3" height="4" fill="var(--fire)"/><rect x="13" y="9" width="3" height="4" fill="var(--fire)"/></svg>全体の地図</h2>
+  <p class="lede">エントリの <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom.ts" target="_blank" rel="noopener"><code class="inline">doom.ts</code></a>（わずか49行）は、エンジンを立ち上げて WAD を取得し、あとは <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/doom-level.ts" target="_blank" rel="noopener"><code class="inline">doom-level.ts</code></a> にレベル作りを丸ごと任せます。</p>
+  <pre class="mermaid">
+flowchart TD
+    ENTRY["doom.ts<br/>エンジン・WAD取得(約28.8MB)"]
+    LEVEL["doom-level.ts<br/>レベルの組み立て役"]
+    subgraph DATA["WADを解く"]
+        WAD["wad/*<br/>バイナリ解析"]
+    end
+    subgraph VIEW["描く"]
+        GEO["geometry/*<br/>壁と床の3D化"]
+        REND["render/*<br/>素材・空・スプライト・武器"]
+    end
+    subgraph SIM["動かす"]
+        MOBJ["mobj/*<br/>アクター(35Hz)"]
+        PLAY["player + combat + physics"]
+        SPEC["specials/*<br/>扉・リフト"]
+    end
+    HUDSND["hud + sound"]
+    ENTRY --> LEVEL
+    LEVEL --> DATA
+    LEVEL --> VIEW
+    LEVEL --> SIM
+    LEVEL --> HUDSND
+    WAD --> GEO
+    WAD --> REND
+  </pre>
+  <p>矢印は「上が下を利用する」向きです。<code class="inline">doom-level.ts</code>（309行）が司令塔で、WAD を解いて→静的な壁と床を作り→動く仕掛け・敵・プレイヤーを用意し→毎フレームの更新ループを回します。<b>「読む」「描く」「動かす」がフォルダごとにきれいに分かれている</b>のが、このデモを読むときの最初の目印です。</p>
+  <div class="callout toxic"><b>⏱️ 描画と進行を切り離す</b><p>更新ループの心臓は<b>固定タイムステップ</b>です。1フレームの経過時間を最大 <code class="inline">0.05</code> 秒に抑え、<code class="inline">1/35</code> 秒たまるごとに「仕掛け→プレイヤー→世界」を1 tic 進める。だから PC が速くても遅くても、扉の開閉速度や敵の動きは<b>常に同じ</b>。オリジナル DOOM の 35Hz を厳密に守っています。</p></div>
+</section>
+
+<section id="wad">
+  <p class="ch">第5章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--brown-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--brown)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>WADを読み解く</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/doom/wad" target="_blank" rel="noopener"><code class="inline">wad/</code></a> フォルダ。生のバイト列を、意味のあるデータへ翻訳する“考古学”の層です。</p>
+  <p>まず <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/wad-file.ts" target="_blank" rel="noopener"><code class="inline">wad-file.ts</code></a> が入れ物を開けます。WAD は<b>12バイトのヘッダ</b>（識別子 <code class="inline">IWAD</code>/<code class="inline">PWAD</code>＋ランプ数＋目次の位置）に続いて、<b>16バイトずつの目次</b>（位置・サイズ・8文字の名前）が並ぶだけの素朴な構造。ここから名前でランプを引ける辞書を作ります。</p>
+  <pre class="mermaid">
+flowchart LR
+    RAW["生バイト列"] --> WF["wad-file<br/>ヘッダ+目次"]
+    WF --> MAP["map<br/>頂点/線/区画"]
+    WF --> PAL["palette<br/>256色+34段"]
+    WF --> GFX["graphics<br/>パッチ/フラット/合成"]
+    MAP --> BQ["bsp-query<br/>点→区画"]
+  </pre>
+  <p><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/map.ts" target="_blank" rel="noopener"><code class="inline">map.ts</code></a> は地図データを固定長レコードとして読みます。<code class="inline">E1M1</code> という目印ランプの直後に、決まった順で並ぶ8種類のデータを、それぞれ正確なバイト数で切り出します。</p>
+  <table>
+    <tr><th>ランプ</th><th>1件</th><th>中身</th></tr>
+    <tr><td>VERTEXES</td><td class="num">4B</td><td>頂点の座標 (x, y)</td></tr>
+    <tr><td>LINEDEFS</td><td class="num">14B</td><td>壁の線（始点・終点・特殊番号・表裏の面）</td></tr>
+    <tr><td>SIDEDEFS</td><td class="num">30B</td><td>面に貼る上・中・下テクスチャと所属セクター</td></tr>
+    <tr><td>SECTORS</td><td class="num">26B</td><td>床/天井の高さ・テクスチャ・明るさ・タグ</td></tr>
+    <tr><td>SEGS / SSECTORS / NODES</td><td class="num">12/4/28B</td><td>BSPの線分・区画・分割ノード</td></tr>
+    <tr><td>THINGS</td><td class="num">10B</td><td>モンスター・アイテム等の配置（種類・角度）</td></tr>
+  </table>
+  <p><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/palette.ts" target="_blank" rel="noopener"><code class="inline">palette.ts</code></a> は色の要。<b>PLAYPAL</b>（14種×256色×3バイト＝10,752バイト）と <b>COLORMAP</b>（34段×256バイト＝8,704バイト）を読み、両者を焼き合わせて <b>256×34 のルックアップ表テクスチャ</b>を作ります。これが次章の“本物の光”の材料です。<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/graphics.ts" target="_blank" rel="noopener"><code class="inline">graphics.ts</code></a> は、列単位で透明を表現する DOOM 独特のパッチ形式や、64×64 のフラット、複数パッチを合成する TEXTURE1/2 を解読します。</p>
+  <p>最後に <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/bsp-query.ts" target="_blank" rel="noopener"><code class="inline">bsp-query.ts</code></a>（43行）。「座標 (x, y) はどのセクターにいて、そこの床/天井の高さは？」を、BSP の木を根からたどって即答します。カメラ・モンスター・仕掛けが共通で使う、地図の“住所案内”です。</p>
+</section>
+
+<section id="geometry">
+  <p class="ch">第6章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--steel-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--steel)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>2Dの地図を3Dの壁に</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/doom/geometry" target="_blank" rel="noopener"><code class="inline">geometry/</code></a>。DOOM の地図は本来“平面図”。それを立体の壁・床・天井に立ち上げます。</p>
+  <p>主役は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/geometry/build-level-geometry.ts" target="_blank" rel="noopener"><code class="inline">build-level-geometry.ts</code></a>（360行）。すべての壁の線（リニデフ）をたどり、その両脇のサイドデフから壁の四角形を起こします。座標は <b>ワールド＝(doomX, 高さ, doomY)</b> で、<b>DOOM の地図単位をそのまま1:1でワールド単位に</b>使います（縮尺なし）。床と天井（フラット）は 64単位ごとにタイル貼り。</p>
+  <table>
+    <tr><th>要素</th><th>作り方</th></tr>
+    <tr><td>一枚壁（片側のみ）</td><td>中テクスチャを床→天井まで一枚張り</td></tr>
+    <tr><td>段差（両側）</td><td>床の高さが違えば下部、天井が違えば上部テクスチャを張る</td></tr>
+    <tr><td>床・天井</td><td>BSPで各区画の凸多角形を復元し扇状に三角形化</td></tr>
+    <tr><td>空の天井</td><td><code class="inline">F_SKY1</code> の天井は張らず、背景の空を透かす</td></tr>
+  </table>
+  <p>床・天井の形は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/geometry/bsp.ts" target="_blank" rel="noopener"><code class="inline">bsp.ts</code></a> が復元します。地図全体を囲む大きな四角形を、BSP の分割線で次々に切り落としていくと、各区画のぴったりの多角形が残る——という賢い手法（Sutherland-Hodgman クリッピング）です。</p>
+  <div class="callout steel"><b>🎨 DOOM の“うそ”の陰影</b><p>オリジナル DOOM は、東西に伸びる壁を少し暗く、南北の壁を少し明るく描きます（<code class="inline">±16</code>）。実際の光源計算ではなく、平坦な迷宮に立体感を与えるための<b>意図的なごまかし（fake contrast）</b>。このデモも忠実に再現しています。各頂点の色に「そのセクターの明るさ」を仕込んで、次章のシェーダへ渡します。</p></div>
+  <p>そして扉やリフトのように<b>動く床・天井</b>は、静的な壁とは別に <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/geometry/dynamic-geometry.ts" target="_blank" rel="noopener"><code class="inline">dynamic-geometry.ts</code></a> が担当。仕掛けが「動いた」と知らせるたび、動く部分の面だけを作り直します（マテリアルは使い回し、GPUのメッシュだけ再生成）。</p>
+</section>
+
+<section id="material">
+  <p class="ch">第7章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--fire-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--fire)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>本物の光を再現する</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/doom-material.ts" target="_blank" rel="noopener"><code class="inline">doom-material.ts</code></a>。このデモが最もこだわった、「DOOM にしか見えない画面」の正体です。</p>
+  <p>ふつうの 3D は色を RGB で持ち、距離に応じて滑らかに暗くします。でも DOOM は違いました。テクスチャは<b>「色番号」だけ</b>（R チャンネルにパレット番号、A に不透明度）を持ち、明るさは <b>COLORMAP という34段の変換表</b>で「番号 → 別の番号」に置き換えて表現します。だから DOOM の陰影は、滑らかではなく<b>カクッと帯状</b>に落ちるのです。</p>
+  <pre class="code"><span class="cm">// パレット番号を、明るさの段(row)ごとに引き直す</span>
+<span class="cm">// 明るいセクターほど浅い段。距離で段が深くなる。</span>
+baseRow = clamp(<span class="st">31</span> - floor(sectorLight / <span class="st">8</span>), <span class="st">0</span>, <span class="st">31</span>);
+lightRow = clamp(baseRow + depth / <span class="st">224.0</span>, <span class="st">0</span>, <span class="st">31</span>);
+<span class="cm">// 224 = 1段ぶん暗くなるまでの距離(DOOM単位)</span></pre>
+  <p>この <code class="inline">DIST_PER_BAND = 224</code> が、あの「遠くが段階的に闇に沈む」距離感の数値です。シェーダは 256×34 のルックアップ表を、横＝色番号・縦＝明るさの段として引きます。<b>色番号そのものは決して混ぜず</b>（混ぜると存在しない色が生まれてしまう）、表を引いた後の最終 RGB だけを補間します。</p>
+  <div class="callout"><b>🔍 ギザギザとチラつきの両立</b><p>近くの壁は 2×2 のバイリニアで軽く滑らかに、斜めに見た遠くの壁は<b>最大16回のサンプリング</b>を足し込んで、DOOM 名物の縦縞のチラつきを抑えます。「ドット感は残しつつ、目に痛いエイリアスは消す」——レトロ再現とモダンな品質の、絶妙な両立です。</p></div>
+</section>
+
+<section id="sky">
+  <p class="ch">第8章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--steel-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--steel)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>空のからくり</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/sky.ts" target="_blank" rel="noopener"><code class="inline">sky.ts</code></a>（69行）。DOOM の空は「無限に遠い背景」。その錯覚を、たった1個の球で作ります。</p>
+  <p>仕掛けはこうです。カメラを中心に置いた直径 <code class="inline">2000</code> の球を用意し、そのピクセルを<b>強制的に最遠面へ</b>（深度を反転Zの奥へ）押し込みます。すると空は必ず「すべての壁より後ろ」に描かれ、天井を張らなかった穴からだけ覗く。描画順を気にせず、空が確実に背景を埋めます。テクスチャは視線の方向から貼り、DOOM 流に<b>360°で4回くり返し</b>ます。空は距離や明るさで暗くならず、常に一番明るい段（row 0）で描かれます。</p>
+</section>
+
+<section id="mobj">
+  <p class="ch">第9章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--toxic-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--toxic)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>モンスターの設計図</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/doom/mobj" target="_blank" rel="noopener"><code class="inline">mobj/</code></a> フォルダ。DOOM の敵・弾・アイテムを支える、有名な<b>データ駆動アクターシステム</b>の移植です。</p>
+  <p>あらゆる“動くもの”は <code class="inline">mobj</code>（マップオブジェクト）という共通の器。位置・体力・フラグ・状態を持ちます。その設計は3段構え——<b>インフォ（型）→ ステート（アニメと行動のコマ）→ アクション（AIの関数）</b>。この3つの表を <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/think.ts" target="_blank" rel="noopener"><code class="inline">think.ts</code></a> が 35Hz で1 tic ずつ進めます。</p>
+  <pre class="mermaid">
+flowchart LR
+    INFO["info<br/>型(体力/速さ/半径)"] --> STATE["states<br/>コマ{絵,フレーム,tics,行動,次}"]
+    STATE --> ACT["actions<br/>AI関数(A_Look等)"]
+    ACT --> THINK["think<br/>1ticずつ進める"]
+    THINK --> WORLD["world<br/>全mobjの管理"]
+  </pre>
+  <p><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/info.ts" target="_blank" rel="noopener"><code class="inline">info.ts</code></a> の目録には、モンスター・アイテム・武器・弾・置物までがずらり。E1M1 に登場する主なモンスターはこちらです（数値はソース実測）。</p>
+  <table>
+    <tr><th>モンスター</th><th class="num">体力</th><th class="num">速さ</th><th>攻撃</th></tr>
+    <tr><td>ゾンビマン（POSS）</td><td class="num">20</td><td class="num">8</td><td>ヒットスキャン（拳銃）</td></tr>
+    <tr><td>シャットガンガイ（SPOS）</td><td class="num">30</td><td class="num">8</td><td>ヒットスキャン（散弾）</td></tr>
+    <tr><td>インプ（TROO）</td><td class="num">60</td><td class="num">8</td><td>近接＋火球（弾）</td></tr>
+    <tr><td>デーモン／スペクター（SARG）</td><td class="num">150</td><td class="num">10</td><td>近接のみ（噛みつき）</td></tr>
+    <tr><td>カコデーモン（HEAD）</td><td class="num">400</td><td class="num">8</td><td>浮遊＋火球</td></tr>
+    <tr><td>バロン（BOSS）</td><td class="num">1000</td><td class="num">8</td><td>火球</td></tr>
+    <tr><td>ロストソウル（SKUL）</td><td class="num">100</td><td class="num">8</td><td>浮遊・自発光</td></tr>
+  </table>
+  <div class="callout toxic"><b>🔢 固定小数点は使わない</b><p>オリジナル DOOM は整数の固定小数点（FRACUNIT）で全計算していましたが、この移植は<b>ふつうの浮動小数点</b>で、DOOM の地図単位をそのまま使います。読みやすさを優先した、現代的な割り切りです。</p></div>
+</section>
+
+<section id="ai">
+  <p class="ch">第10章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--toxic-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--toxic)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>敵を動かす頭脳</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/actions.ts" target="_blank" rel="noopener"><code class="inline">actions.ts</code></a>。ステートの各コマに紐づく“行動”が、敵の思考そのものです。</p>
+  <p>DOOM の AI は驚くほどシンプルな関数の集まりです。ステートが進むたびに、そのコマに書かれた行動名が呼ばれます。</p>
+  <table>
+    <tr><th>行動</th><th>中身</th></tr>
+    <tr><td><code class="inline">A_Look</code></td><td>プレイヤーが視界に入れば標的に設定し、覚醒（見え音を鳴らす）</td></tr>
+    <tr><td><code class="inline">A_Chase</code></td><td>標的へ接近。近ければ近接、条件が揃えば遠隔攻撃へ。8方向で移動</td></tr>
+    <tr><td><code class="inline">A_FaceTarget</code></td><td>標的の方を向く</td></tr>
+    <tr><td><code class="inline">A_*Attack</code></td><td>各モンスター固有の攻撃（拳銃/散弾/火球/噛みつき）</td></tr>
+    <tr><td><code class="inline">A_Pain / A_Scream / A_Fall</code></td><td>被弾のうめき／断末魔／死んで当たり判定を消す</td></tr>
+  </table>
+  <p>攻撃するかどうかの判断（<code class="inline">checkMissileRange</code>）も DOOM 譲り。距離が近いほど発砲しやすく、遠いと撃ち控える確率計算になっています。近接の間合いは <code class="inline">MELEE_RANGE = 64</code>、遠隔の射程は <code class="inline">MISSILE_RANGE = 2048</code>（＝32×64）。移動方向は「標的に近づく向き」を対角優先で選び、壁や仲間にぶつかれば別の向きを試します。</p>
+</section>
+
+<section id="sprites">
+  <p class="ch">第11章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--fire-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--fire)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>スプライトを板に描く</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/sprites.ts" target="_blank" rel="noopener"><code class="inline">sprites.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/sprite-render.ts" target="_blank" rel="noopener"><code class="inline">sprite-render.ts</code></a>。DOOM の敵は3Dモデルではなく、1枚絵の板です。</p>
+  <p>モンスターは常にカメラへ正面を向く<b>ビルボード</b>（板）に描かれます。でも、ただ正面を向くだけでは“書き割り”になってしまう。そこで DOOM は<b>8方向ぶんの絵</b>を用意し、「プレイヤーがどの角度から敵を見ているか」に応じて絵を差し替えます。横を向いた敵は横向きの絵、背を向けた敵は後ろ姿の絵、という具合です。</p>
+  <p>その角度計算が <b>BAM</b>（角度を32bit整数で表す方法）の見せ場。「視線→敵の方向」と「敵の向き」の差をビットシフトするだけで、8方向のどれかへ即座に振り分けられます。絵はスプライト名＋フレーム文字＋方向番号（例 <code class="inline">TROOA1</code>）で管理され、左右対称の向きは<b>1枚を反転して使い回し</b>ます。全スプライトは1枚の大きなアトラス（1024幅）に詰め込まれ、壁と同じ COLORMAP の陰影で距離に応じて暗くなります。</p>
+</section>
+
+<section id="player">
+  <p class="ch">第12章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--red-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--red)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>プレイヤーと武器</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/player/player.ts" target="_blank" rel="noopener"><code class="inline">player.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/weapon-view.ts" target="_blank" rel="noopener"><code class="inline">weapon-view.ts</code></a>。体力・防具・弾薬・所持武器、そして手元の銃の描画です。</p>
+  <p>8種の武器はそれぞれ、弾の種類・連射間隔（tic）・発砲音を持ちます。開始時は拳とピストル、体力100、弾薬は弾丸50発から。</p>
+  <table>
+    <tr><th>武器</th><th>弾</th><th class="num">連射(tic)</th><th>ダメージ（1発）</th></tr>
+    <tr><td>拳 / チェーンソー</td><td>—</td><td class="num">12 / 4</td><td>2〜20（近接64）</td></tr>
+    <tr><td>ピストル</td><td>弾丸</td><td class="num">12</td><td>5 / 10 / 15（散り±0.04）</td></tr>
+    <tr><td>ショットガン</td><td>シェル</td><td class="num">28</td><td>7発の散弾×5/10/15</td></tr>
+    <tr><td>チェーンガン</td><td>弾丸</td><td class="num">4</td><td>5 / 10 / 15</td></tr>
+    <tr><td>ロケット / プラズマ / BFG</td><td>ロケット/セル</td><td class="num">18 / 3 / 40</td><td>10〜50</td></tr>
+  </table>
+  <p>手元の武器は <code class="inline">weapon-view.ts</code> が仮想 320×200 の画面に 2D で重ねます。移動中は<b>上下左右に揺れ</b>（横は cos、縦は sin の絶対値で“8の字”）、発砲した瞬間は発射コマ＋別レイヤーの<b>マズルフラッシュ</b>を <code class="inline">0.12</code> 秒だけ重ねる。すべて COLORMAP の一番明るい段で、常にくっきり描かれます。</p>
+</section>
+
+<section id="combat">
+  <p class="ch">第13章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--red-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--red)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>撃つ・当たる</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/combat/attack.ts" target="_blank" rel="noopener"><code class="inline">combat/attack.ts</code></a> と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/physics/collision.ts" target="_blank" rel="noopener"><code class="inline">physics/collision.ts</code></a>。弾の当たり判定と、壁ずりの移動です。</p>
+  <p>ほとんどの武器は<b>ヒットスキャン</b>——撃った瞬間に光線を飛ばし、最初にぶつかる壁までの距離を測り、その手前にいる敵を探して当てます。命中すれば血（BLOOD）、外れれば煙（PUFF）を出し、<code class="inline">damageMobj</code> が体力を削る。体力が尽きればモンスターは死亡ステートへ、被弾すれば <code class="inline">painChance</code> の確率でひるみステートへ遷移します。インプの火球だけは本物の飛翔体として飛び、着弾で爆発します。</p>
+  <p>移動と当たり判定は <code class="inline">collision.ts</code>。プレイヤーは<b>半径16の円</b>（高さ56、視点高41、登れる段差24）としてモデル化され、壁の線に沿って滑ります（法線方向に押し戻して接線方向の動きは残す＝ウォールスライド）。両側が通れる壁は「すき間が身長より狭い／段差が24を超える」ときだけ塞がる。扉やリフトで高さが変わると、この判定も<b>その場の高さ</b>で更新されるので、閉じる扉に挟まれます。</p>
+</section>
+
+<section id="specials">
+  <p class="ch">第14章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--brown-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--brown)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>扉とリフト</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/specials/specials.ts" target="_blank" rel="noopener"><code class="inline">specials.ts</code></a>（410行・最大のファイル）と <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/specials/special-types.ts" target="_blank" rel="noopener"><code class="inline">special-types.ts</code></a>。壁や床に仕込まれた“仕掛け”です。</p>
+  <p>DOOM の扉・スイッチ・リフトは、リニデフに割り当てられた<b>番号</b>で表されます。<code class="inline">special-types.ts</code> はその番号表（E1M1 が使う範囲）。「どう起動するか（押す/歩いて横切る/スイッチ）」「くり返せるか」「何をするか」を定義します。</p>
+  <table>
+    <tr><th class="num">番号</th><th>起動</th><th>動作</th><th class="num">速度/待機</th></tr>
+    <tr><td class="num">1</td><td>使う</td><td>手動ドア（開いて待って閉じる）</td><td class="num">2 / 150</td></tr>
+    <tr><td class="num">2</td><td>横切る</td><td>ドア開けっ放し</td><td class="num">2 / —</td></tr>
+    <tr><td class="num">117</td><td>使う</td><td>高速ドア（ブレイズ）</td><td class="num">8 / 150</td></tr>
+    <tr><td class="num">62 / 88</td><td>スイッチ/横切る</td><td>リフト（下げて待って戻す）</td><td class="num">4 / 105</td></tr>
+    <tr><td class="num">23</td><td>スイッチ</td><td>床を最低の隣接床まで下げる</td><td class="num">2 / —</td></tr>
+    <tr><td class="num">11</td><td>スイッチ</td><td>レベル出口</td><td class="num">—</td></tr>
+  </table>
+  <p><code class="inline">specials.ts</code> はこれを実際の“動く床・天井”に変えます。<kbd>Space</kbd> で使うと、正面へ <code class="inline">64</code> の光線を飛ばして手前のスイッチ/ドアを起動。歩いて線を横切れば、横断型の仕掛けが発火。ドアは「隣接する一番低い天井の4つ下」まで開き、150 tic 待って閉じます。</p>
+  <div class="callout brown"><b>🚪 挟まれても潰されない</b><p>閉じかけのドアの真下にプレイヤーがいて、頭上の余裕が <code class="inline">56</code>（身長）を切りそうなら、ドアは<b>潰さずに再び開き</b>ます。オリジナルの“親切設計”まで再現。動いた区画は「汚れフラグ」を立て、第6章の動的ジオメトリが該当部分だけ作り直します。</p></div>
+</section>
+
+<section id="hud">
+  <p class="ch">第15章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--toxic-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--toxic)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>ステータスバー</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/hud/hud.ts" target="_blank" rel="noopener"><code class="inline">hud.ts</code></a>（342行）。画面下のあの茶色いバーを、WAD の本物のグラフィックから組み立てます。</p>
+  <p>体力・防具・弾薬・武器スロット・鍵——すべて WAD の <code class="inline">STBAR</code> 系グラフィックを1枚のアトラスに焼き、仮想 320×200 の座標（バーの上端 y=168）に、当時のレイアウト定数どおりに並べます。数字も本物のフォント絵です。</p>
+  <div class="callout toxic"><b>😀 表情が変わる“あの顔”</b><p>中央の <b>DOOMガイの顔</b>も再現。体力から痛みレベル（0〜4）を出し、被弾直後は「イテッ」という顔、死ねば骸骨、平常時は 0.5 秒ごとに左・正面・右へ視線を動かします。DOOM に無かった十字カーソルだけは、遊びやすさのために作者が足したもの（DOM オーバーレイ）です。</p></div>
+</section>
+
+<section id="sound">
+  <p class="ch">第16章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--steel-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--steel)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>音</h2>
+  <p class="lede">担当：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/sound/sound.ts" target="_blank" rel="noopener"><code class="inline">sound.ts</code></a>（86行）。効果音は合成ではなく、WAD の中の本物のサウンドを鳴らします。</p>
+  <p>DOOM の効果音は <code class="inline">DS</code> で始まるランプ（例：<code class="inline">DSPISTOL</code>）に、DMX 形式の 8bit PCM として入っています。<code class="inline">sound.ts</code> はこれを解読し（サンプルレートは通常 11025Hz、前後16サンプルの余白は切り落とす）、Web Audio の <code class="inline">AudioBuffer</code> に変換して再生。同じ音の連発は 1 tic（1/35秒）に1回まで、音量は 0.6 に抑えます。ブラウザの制約で、音は最初のキー操作の後から鳴り始めます。</p>
+</section>
+
+<section id="themes">
+  <p class="ch">第17章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="var(--red-deep)"/><rect x="5" y="5" width="14" height="14" fill="var(--red)"/><rect x="8" y="9" width="3" height="4" fill="#16100E"/><rect x="13" y="9" width="3" height="4" fill="#16100E"/></svg>設計テーマ</h2>
+  <p class="lede">29ファイルに散らばって見えて、じつは一貫した4つの考え方が通っています。</p>
+  <div class="grid2">
+    <div class="term"><b>⚖️ クリーンルームで作る</b><p>GPLのDOOMソースは見ない・写さない。公開仕様だけを頼りにゼロから実装し、データも自由な Freedoom を使う。だから堂々と公開・教材化できる。</p></div>
+    <div class="term"><b>📊 データ駆動で動かす</b><p>モンスターも仕掛けも、ロジックではなく<b>表</b>で定義。インフォ→ステート→アクション、線番号→動作。表を足すだけで敵や仕掛けが増える。</p></div>
+    <div class="term"><b>💡 忠実さは“らしさ”に宿る</b><p>1:1のスケール、±16のfake contrast、224単位ごとの帯状の闇、パレット番号を混ぜない描画。細部の再現が「DOOMにしか見えない画面」を作る。</p></div>
+    <div class="term"><b>⏱️ 描画と進行を分ける</b><p>見た目は可変フレーム、ゲームは35Hz固定tic。この分離が、PCの速さに左右されない“当時のままの手ざわり”を保証する。</p></div>
+  </div>
+  <div class="callout"><b>📝 コメントは「理由の記録」</b><p>このコードのコメントには「なぜそうしたか」と「どの公開資料に基づくか」がていねいに書かれています。<i>GPLソース不参照の宣言／閉じるドアが潰さず反転する理由／巨大な床を影から外す判断</i>——判断の理由ごと読めるのが、このサンプルの教材価値です。Minecraft・Platformer・Tetris・Sandblox デモと共通する“コメント文化”が、ここにも息づいています。</p></div>
+</section>
+
+<section id="files">
+  <p class="ch">第18章</p>
+  <h2><svg viewBox="0 0 24 24" width="24" aria-hidden="true" shape-rendering="crispEdges"><rect x="3" y="3" width="18" height="18" fill="#0C0806"/><rect x="5" y="5" width="14" height="14" fill="var(--stage)"/><rect x="8" y="9" width="3" height="4" fill="var(--fire)"/><rect x="13" y="9" width="3" height="4" fill="var(--fire)"/></svg>ファイル一覧（全29ファイル）</h2>
+  <p class="lede">コードリーディングのおともに。行数は <code class="inline">master</code> ブランチのソース実測値です。<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/specials/specials.ts" target="_blank" rel="noopener"><code class="inline">specials.ts</code></a> が最大で、合計およそ5,010行。</p>
+  <table>
+    <tr><th>ファイル</th><th style="width:12%">行数</th><th>やくわり</th></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--stage); color:#EAE0D6">エントリ・司令塔</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom.ts" target="_blank" rel="noopener"><code class="inline">doom.ts</code></a></td><td class="num">49</td><td>エンジン起動・WAD取得・レベル構築の呼び出し・ループ開始</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/doom-level.ts" target="_blank" rel="noopener"><code class="inline">doom-level.ts</code></a></td><td class="num">309</td><td>レベル全体を組み立て、35Hz固定ticの更新ループとカメラを回す</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--brown-bg)">WAD解析</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/map.ts" target="_blank" rel="noopener"><code class="inline">wad/map.ts</code></a></td><td class="num">219</td><td>地図ランプ（頂点/線/面/区画/BSP/配置）を固定長で解析</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/graphics.ts" target="_blank" rel="noopener"><code class="inline">wad/graphics.ts</code></a></td><td class="num">192</td><td>パッチ/フラット/PNAMES/合成テクスチャの解読</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/wad-file.ts" target="_blank" rel="noopener"><code class="inline">wad/wad-file.ts</code></a></td><td class="num">100</td><td>WADの入れ物（ヘッダ+目次）を開き、ランプを引く</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/palette.ts" target="_blank" rel="noopener"><code class="inline">wad/palette.ts</code></a></td><td class="num">75</td><td>PLAYPAL/COLORMAPを256×34のルックアップ表テクスチャに</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/wad/bsp-query.ts" target="_blank" rel="noopener"><code class="inline">wad/bsp-query.ts</code></a></td><td class="num">43</td><td>点→区画・床/天井高さをBSPで即答（住所案内）</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--steel-bg)">ジオメトリ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/geometry/build-level-geometry.ts" target="_blank" rel="noopener"><code class="inline">geometry/build-level-geometry.ts</code></a></td><td class="num">360</td><td>2D地図→3Dの壁/床/天井をテクスチャ別に生成（fake contrast）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/geometry/bsp.ts" target="_blank" rel="noopener"><code class="inline">geometry/bsp.ts</code></a></td><td class="num">107</td><td>BSP分割面で各区画の凸多角形（床天井の形）を復元</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/geometry/dynamic-geometry.ts" target="_blank" rel="noopener"><code class="inline">geometry/dynamic-geometry.ts</code></a></td><td class="num">84</td><td>扉・リフト等の動く面だけを再生成</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--fire-bg)">レンダリング</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/sprites.ts" target="_blank" rel="noopener"><code class="inline">render/sprites.ts</code></a></td><td class="num">291</td><td>スプライトを解読しアトラス化、8方向から正しい絵を選ぶ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/weapon-view.ts" target="_blank" rel="noopener"><code class="inline">render/weapon-view.ts</code></a></td><td class="num">224</td><td>一人称の武器を2Dで重ね、揺れとマズルフラッシュ</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/doom-material.ts" target="_blank" rel="noopener"><code class="inline">render/doom-material.ts</code></a></td><td class="num">159</td><td>パレット+COLORMAPの帯状陰影を再現するWGSLマテリアル</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/sprite-render.ts" target="_blank" rel="noopener"><code class="inline">render/sprite-render.ts</code></a></td><td class="num">107</td><td>全mobjをカメラ正面のビルボードとして描画</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/sky.ts" target="_blank" rel="noopener"><code class="inline">render/sky.ts</code></a></td><td class="num">69</td><td>F_SKY1の空。反転Zの最遠面に押し込む球</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/render/texture-cache.ts" target="_blank" rel="noopener"><code class="inline">render/texture-cache.ts</code></a></td><td class="num">69</td><td>壁/床テクスチャを必要時にGPUテクスチャへ変換・キャッシュ</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--toxic-bg)">アクター（mobj）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/info.ts" target="_blank" rel="noopener"><code class="inline">mobj/info.ts</code></a></td><td class="num">219</td><td>全アクターの型目録（体力/速さ/半径/フラグ/音）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/actions.ts" target="_blank" rel="noopener"><code class="inline">mobj/actions.ts</code></a></td><td class="num">201</td><td>AI・攻撃の行動関数（A_Look/A_Chase/各攻撃）</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/world.ts" target="_blank" rel="noopener"><code class="inline">mobj/world.ts</code></a></td><td class="num">199</td><td>THINGSからmobjを生成、毎tic進行・取得・ビルボード列を作る</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/states.ts" target="_blank" rel="noopener"><code class="inline">mobj/states.ts</code></a></td><td class="num">177</td><td>ステート表（絵/フレーム/tics/行動/次）と各mobjの入口</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/think.ts" target="_blank" rel="noopener"><code class="inline">mobj/think.ts</code></a></td><td class="num">126</td><td>1ticの進行・移動・重力・モンスターの歩行</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/mobj/mobj.ts" target="_blank" rel="noopener"><code class="inline">mobj/mobj.ts</code></a></td><td class="num">67</td><td>Mobj構造体と8方向の向き定義</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--red-bg)">プレイヤー・戦闘・物理</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/player/player.ts" target="_blank" rel="noopener"><code class="inline">player/player.ts</code></a></td><td class="num">269</td><td>体力/防具/弾薬/武器の状態と、選択・発砲・被弾・取得</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/combat/attack.ts" target="_blank" rel="noopener"><code class="inline">combat/attack.ts</code></a></td><td class="num">211</td><td>視線判定・ヒットスキャン・飛翔体・ダメージと状態遷移</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/physics/collision.ts" target="_blank" rel="noopener"><code class="inline">physics/collision.ts</code></a></td><td class="num">181</td><td>円vs線の移動・壁ずり・段差・mobj同士の押し合い</td></tr>
+    <tr class="gh"><td colspan="3" style="background:var(--brown-bg)">仕掛け・UI・音</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/specials/specials.ts" target="_blank" rel="noopener"><code class="inline">specials/specials.ts</code></a></td><td class="num">410</td><td>ドア/リフト/床/スイッチ/出口の実行時ロジック</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/hud/hud.ts" target="_blank" rel="noopener"><code class="inline">hud/hud.ts</code></a></td><td class="num">342</td><td>本物のSTBARグラフィックでステータスバー＋表情の顔</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/sound/sound.ts" target="_blank" rel="noopener"><code class="inline">sound/sound.ts</code></a></td><td class="num">86</td><td>WADのDMX音（DS*）をWeb Audioで再生</td></tr>
+    <tr><td><a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom/specials/special-types.ts" target="_blank" rel="noopener"><code class="inline">specials/special-types.ts</code></a></td><td class="num">65</td><td>リニデフ特殊番号の表（速度/待機/起動方法）</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--ink-soft)">行数は <code class="inline">master</code> ブランチ（2026年時点）のソース実測値です。合計およそ5,010行（29ファイル）。</p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="inner">
+    <p>ソースコード：<a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/lab/lite/src/demos/doom.ts" target="_blank" rel="noopener">BabylonJS/Babylon-Lite — lab/lite/src/demos/doom.ts</a>（コンポーネント群は同階層の <a href="https://github.com/BabylonJS/Babylon-Lite/tree/master/lab/lite/src/demos/doom" target="_blank" rel="noopener">doom/</a> フォルダ）</p>
+    <p>本デモは<b>クリーンルーム実装</b>で、オリジナルの DOOM エンジン（GPL）のソースコードは参照・複製していません。読み込むゲームデータは、権利的にフリーな互換 IWAD <a href="https://freedoom.github.io/" target="_blank" rel="noopener">Freedoom</a>（BSD ライセンス）です。本ページの図は mermaid.js とインラインSVGで描画しています。</p>
+    <p>解説対象のソースコード（Babylon-Lite）は <a href="https://github.com/BabylonJS/Babylon-Lite/blob/master/LICENSE" target="_blank" rel="noopener">Apache License 2.0</a> で公開されています。本ページで引用しているコード断片・数値の著作権はそれぞれの著作者に帰属します。図の描画に使用している <a href="https://mermaid.js.org/" target="_blank" rel="noopener">mermaid.js</a>（MIT License）と Web フォント（SIL Open Font License）は CDN から参照しています。</p>
+    <p>DOOM は id Software / ZeniMax Media の商標です。本ページおよび解説対象のデモは、同社とは無関係の、独立した教育目的のコンテンツです。</p>
+  </div>
+</footer>
+
+<script type="module">
+try {
+  const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11.16.0/+esm');
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    securityLevel: 'loose',
+    fontFamily: "'Zen Kaku Gothic New', sans-serif",
+    flowchart: { htmlLabels: true, curve: 'linear', nodeSpacing: 34, rankSpacing: 42 },
+    themeVariables: {
+      fontSize: '13.5px',
+      primaryColor: '#EDE4D8',
+      primaryTextColor: '#221B18',
+      primaryBorderColor: '#B3221B',
+      lineColor: '#9C8A7A',
+      secondaryColor: '#F0E7DC',
+      tertiaryColor: '#EDF3E0',
+      clusterBkg: '#F7F2EA',
+      clusterBorder: '#CBBFB2',
+      edgeLabelBackground: '#EFEAE3',
+      titleColor: '#221B18'
+    }
+  });
+  // Web フォント（Zen Kaku Gothic New 等）の読み込みを待ってから測定・描画する。
+  // 待たないとフォールバックフォントの幅でノードが確定し、本フォント差し替え後に
+  // 日本語テキストがノード枠からはみ出して切れてしまう。
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) {}
+  }
+  await mermaid.run({ querySelector: 'pre.mermaid' });
+} catch (e) {
+  console.error('mermaid の読み込みに失敗しました（オフラインの可能性）:', e);
+}
+</script>
+</body>
+</html>
