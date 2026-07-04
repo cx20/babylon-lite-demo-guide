@@ -14,8 +14,6 @@ WebGPU 専用の軽量 3D エンジン **Babylon Lite** の公式デモを、コ
 | 光るブロックのつくりかた（3D テトリス） | 公開中 | [tetris/](tetris/index.html) |
 | ブロックで作って歩けるサンドボックス（Sandblox） | 公開中 | [sandblox/](sandblox/index.html) |
 | ブラウザで動く DOOM のつくりかた（DOOM 再現） | 公開中 | [doom/](doom/index.html) |
-| Gaussian Splats（仮） | 準備中 | — |
-| Treasure Waterfall（仮） | 準備中 | — |
 
 トップページ（全デモの一覧カード）: [index.html](index.html)
 
